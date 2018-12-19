@@ -1,0 +1,572 @@
+% Sur MacCJS, faire
+%/usr/local/texlive/2015/bin/x86_64-darwin/pdflatex
+%
+\documentclass[]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[frenchb]{babel}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage[pdftex]{hyperref}
+\usepackage{graphicx}
+\usepackage[ruled]{algorithm}
+\usepackage{algorithmicx}
+%\usepackage{algorithm,algorithmicx,algpseudocode}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+\usepackage{mathabx}
+\usepackage{dsfont}
+\usepackage{enumitem}
+\usepackage{color}
+\newcommand{\be}{\begin{eqnarray*}}
+\newcommand{\ee}{\end{eqnarray*}}
+\newcommand{\dsp}{\displaystyle}
+\algrenewcommand{\algorithmiccomment}[1]{\hfill \# {\scriptsize #1}} 
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+\algnewcommand\algodesc{\textbf{Description:}}
+\algnewcommand\Desc{\item[\algodesc]}
+\algnewcommand\algouse{\textbf{Usage:}}
+\algnewcommand\Use{\item[\algouse]}
+\makeatletter
+\newcommand{\algrule}[1][.2pt]{\par\vskip.5\baselineskip\hrule height #1\par\vskip.5\baselineskip}
+\makeatother
+
+\def\R{\mathbb{R}}
+\def\UN{\mathds{1}}
+\def\Ik{\mathbb{I}_k}
+\def\Ikm{\mathbb{I}_{\scriptscriptstyle{k-1}}}
+\def\Il{\mathbb{I}_l}
+\def\Im{\mathbb{I}_m}
+\def\Tmax{T^{\max}}
+\def\ver{V1}  %version
+
+\begin{document}
+\shorthandoff{:}
+\tableofcontents
+\listofalgorithms
+
+\section{Notation}
+%%%
+% Ik
+%%%
+We denote by $K$ the number of intervals (partitions) of the time interval $(0,\Tmax)$, each time interval having a size $\delta$ (most of the time we have $K\,\delta=\Tmax$).
+
+We introduce the following notation for $0\leq k \leq K-1$ ($\Ik$ is an open interval on the left and closed on the right) to have a shorter form
+\be
+\Ik&=&(k\,\delta,(k+1)\,\delta]\\
+(t-\Ik)&=&[t-(k+1)\,\delta,\,t-k\,\delta) \ \ \forall t
+\ee
+%%%
+% Ensemble des spikes
+%%% 
+
+We assume that $(0,\Tmax)$ corresponds to the union of the partitions (no overlapping).
+\be
+(0,\Tmax)=\bigcup_{k=0}^{K-1} \Ik
+\ee
+Numbering of partitions starts from 0!
+In Matlab or in R, indices start from 1.
+As we take into account $\mu$ index, index $k+2$ in $b$ corresponds to the k-th partition.
+
+We choose $\gamma$ equal to 3, in the computation of $d$
+
+We denote by $\varphi_k(t)$ or by $N_{[t-k\delta,t-(k-1)\delta)}$ (or by $N_{t-\Ikm}$) the number of spikes of the point process in the interval $[t-k\delta,t-(k-1)\delta)$ (or $t-\Ikm$).
+
+For $1\leq k \leq K$
+\begin{eqnarray}
+\begin{array}{lll}
+\varphi_k(t)&=&N_{[t-k\delta,T-(k-1)\delta)}=N_{t-\Ikm}\\
+\varphi_k(t)&=&\hbox{number of spikes of the point process in the interval }(t-\Ikm)
+\end{array}
+\end{eqnarray}
+
+$\varphi_k$ is a piecewise constant function. Représenter un exemple
+\section{Matrix computation}
+We will compute here vectors and matrices 
+
+For the sake of simplicity, we denote by $T_i$ the spike times contained in the spike array.
+%%%%%
+%def de A
+%%%%%
+\be
+A_{ij} = m \hbox{ iff } (T_j - T_i) \in \Im \Leftrightarrow m\,\delta < T_j-T_i \leq (m+1)\delta
+\ee
+%%%%%
+%def de b
+%%%%%
+\be
+b_{k}=\int_0^{Tmax} \psi_t(\varphi_k)\,dN_t \ \forall k \in \ldbrack 0,K-1\ldbrack
+\ee
+
+Deterministic way.
+
+
+We have, for $k\geq 1$
+\begin{eqnarray}
+\label{eq:defb}
+\begin{array}{lll}
+b_{k}&=&\dsp\int_0^{Tmax} \varphi_k(t) \,dN_t=\dsp\int_0^{Tmax} N_{[t-k\delta,t-(k-1)\delta)} \,dN_t=\dsp\int_0^{Tmax} N_{t-\Ikm} \,dN_t\\[8pt]
+b_{k}&=&\dsp\int_0^{Tmax} \varphi_k(t) \,dN_t= \dsp\int\sum_{T<\Tmax} N_{[T-k\delta,T-(k-1)\delta)}= \dsp\sum_{T<\Tmax} N_{T-\Ikm}
+\end{array}
+\end{eqnarray}
+
+
+%%%%%
+%def de d
+%%%%%
+\be
+d_k=\sqrt{2\gamma\log(\Tmax)\,\int_0^{\Tmax}\psi_t^2(\varphi_k)\,dN_t}+\dsp\frac{\gamma\,\log(\Tmax)}{3}\sup_{t\in[0,\Tmax]}|\psi_t(\varphi_k)|
+\ee
+
+Deterministic way
+\be
+d_k=\sqrt{2\gamma\log(\Tmax)\,\int_0^{\Tmax}\varphi_k^2(t)\,dN_t}+\dsp\frac{\gamma\,\log(\Tmax)}{3}\sup_{t\in[0,\Tmax]}|\varphi_k(t))|
+\ee
+
+
+%%%%%
+%def de G
+%%%%%
+\be
+G_{kl}=\int_0^{Tmax} \psi_t(\varphi_k)\,\psi_t(\varphi_l)\,\,dt \ \ \forall k,l \in \ldbrack 0,K-1\ldbrack
+\ee
+
+Deterministic way
+\be
+G_{kl}=\int_0^{Tmax} \sum_{T_i,T_j<t}\mathds{1}_{\mathbb{I}_k}(t-T_i)\,\mathds{1}_{\mathbb{I}_l}(t-T_j) \forall k,l \in \ldbrack 0,K-1\ldbrack
+\ee
+
+
+\begin{algorithm}[!h]
+\caption{Partial computation of $A$ and $b$: countpair function}
+\begin{algorithmic}[1] 
+%Algorithm
+%Step 1: Find the first index j such that T¡ > 0, calls jstart.
+%Step 2: From each index j from jstart, we 'look' back II¿ by define Tlow, and Tup.
+%Step 3: If we flnd the index ¿ such lhat T¿ belongs to the interval (Tlow,Tup], increase
+%count, and record it in the matrix ,4. \Me stop immediately when T¿ < Tlota.
+
+\Use countpair(spike, del, k, A)
+  \Desc Partial computation of $A$ and computation of $b$ for the k-th partition
+  \Input spike; array of spike times
+\Input del; $\delta$, delay
+\Input k; partition index ($k \in \ldbrack 0,K-1 \rdbrack$)
+\Input A; $N$-by-$N$ matrix already initialized\Comment{$N$ is the number of spikes}
+\Output Returns $A$ and count
+\algrule
+% \\\hrulefill
+\State count $\gets$ 0 \Comment{count corresponds to b[k+2]}
+\State N $\gets$ length(spike) \Comment{$N$ is the number of spikes}
+\State jstart $\gets$ which(spike>0)[1] \Comment{first index such that spike > 0}
+\For{j=jstart:N}
+\State $T_{low}$ $\gets$ spike[j] - (k+1)*del
+\State $T_{up}$ $\gets$ spike[j] - k*del
+\State i $\gets$ j-1
+\While{((i>0) \& (i<N))}
+\If{spike[i] $\in$ $[T_{low},\,T_{up})$}
+\State count $\gets$ count + 1
+\State A[i,j] $\gets$ k
+\Else
+\If{(spike[i] $<T_{low}$)}
+\State break
+\EndIf
+\EndIf
+\EndWhile
+\EndFor
+\State \Return list(count, A)
+\end{algorithmic}
+\end{algorithm}
+
+%%%%
+% algo de A
+%%%
+
+\begin{algorithm}[!h]
+\caption{Full computation of $A$}
+\begin{algorithmic}[1] 
+\Use computeA(spike, del, K)
+  \Desc Full computation of $A$ using \textit{countpair} function
+  \Input spike; array of spike times
+\Input del; $\delta$
+  \Input K; number of partitions
+\Output A; $N$-by-$N$ matrix \Comment{$N$ is the number of spikes} (K+1) (see \ref{eq:defb})
+\algrule
+% \\\hrulefill
+\State N $\gets$ length(spike)
+\State A $\gets$ matrix(-2, nrow=N, ncol=N) \Comment{initialization}
+\For{k=0:(K-1)}
+\State A $\gets$ countpair(spike, del, k, A)[[2]]
+\EndFor
+\State \Return A
+\end{algorithmic}
+\end{algorithm}
+
+%%%%
+% algo de b
+%%%
+
+\begin{algorithm}[!h]
+\caption{Full computation of $b$}
+\begin{algorithmic}[1] 
+\Use computeb\_\ver(spike, del, Tmax)
+  \Desc Full computation of $b$ using \textit{countpair} function
+  \Input spike; array of spike times
+\Input del; $\delta$
+  \Input K; number of partitions
+\Output b; (K+1) vector (see \ref{})
+\algrule
+% \\\hrulefill
+\State K $\gets$ floor(Tmax/del)
+\State N $\gets$ length(spike)
+\State b $\gets$ vector(mode='double', length=K+1) \Comment{initialization} 
+\State jstart $\gets$ which(spike>0)[1] \Comment{first index such that spike > 0}
+\State b[1] $\gets$ N \Comment{{\color{red}{A verifier: c'est le nb de spikes dans (0,$\Tmax$), donc pas forcément N}}}
+\If{jstart>0}
+\For{k=0:(K-1)} 
+\For{j=jstart:N} \Comment{{\color{red}{to improve for jstart}}}
+\State $T_{low}$ $\gets$ spike[j] - (k+1)*del
+\State $T_{up}$ $\gets$ spike[j] - k*del
+\State i $\gets$ j-1
+\While{((i>0) \& (i<N))}
+\If{(spike[i] $\in$ [$T_{low}$, $T_{up}$))}
+\State b[k+2] $\gets$ b[k+2] + 1
+\Else
+\If{($T_{low}>$spike[i])}
+\State break
+\EndIf
+\EndIf
+\State i $\gets$ i-1
+\EndWhile
+\EndFor
+\EndFor
+\EndIf
+\State \Return b
+\end{algorithmic}
+\end{algorithm}
+
+%%%%
+% algo de b
+%%%
+
+\begin{algorithm}[!h]
+\caption{Full computation of $b$}
+\begin{algorithmic}[1] 
+\Use computeb\_\ver(spike, del, Tmax)
+  \Desc Full computation of $b$ using \textit{countpair} function
+  \Input spike; array of spike times
+\Input del; $\delta$
+  \Input K; number of partitions
+\Output b; (K+1) vector (see \ref{})
+\algrule
+% \\\hrulefill
+\State N $\gets$ length(spike)
+\State b $\gets$ matrix(0, nrow=N, ncol=N) \Comment{initialization} 
+\State A $\gets$ matrix(-2, nrow=N, ncol=N) \Comment{A is not important for b but needs to be initialized}
+\State b[1] $\gets$ N
+\For{k=0:(K-1)}
+\State b[k+2] $\gets$ countpair(spike, del, k, A)[[1]]
+\EndFor
+\State \Return b
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+%%%%
+% algo de d
+%%%
+
+\begin{algorithm}[!h]
+\caption{Partial computation of $d$}
+\begin{algorithmic}[1] 
+%Algorithm
+%Step 1: Find the first index j such that T¡ > 0, calls jstart.
+%Step 2: From each index j from jstart, we 'look' back II¿ by define Tlow, and Tup.
+%Step 3: If we flnd the index ¿ such lhat T¿ belongs to the interval (Tlow,Tup], increase
+%count, and record it in the matrix ,4. \Me stop immediately when T¿ < Tlota.
+
+\Use compute\_d(spike, del, Tmax, A, k, gamma)
+  \Desc Partial computation of $A$ and computation of $b$ for the k-th partition
+  \Input spike; array of spike times
+\Input del; $\delta$, delay
+\Input $\Tmax$; maximum time of the experience
+\Input A; $N$-by-$N$ matrix already initialized\Comment{$N$ is the number of spikes}
+\Input k; partition index ($k \in \ldbrack 0,K-1 \rdbrack$)
+\Input $\gamma$; constant used in the definition of $d$
+\Output Returns $d$
+\algrule
+% \\\hrulefill
+\State iind $\gets$ which(A==k, arr.ind=TRUE) \Comment{iind is a matrix}
+\State z $\gets$ vector(length=length(spike), mode='numeric') \Comment{for maximum value}
+\For{i=1:N} \Comment{$N\geq 1$!}
+\State  $T_1 \gets spike[i] + k*del$; $T_2 = spike[i] + (k+1)*del$
+\If{($T_2 \leq \Tmax$) \& ($T_2 \geq 0$)}
+\State z[i] $\gets$  countspike(spike, del, k, $T_2$)
+\EndIf
+\If{($T_1 < \Tmax$) \& ($T_1 \geq 0$)}
+\State z[i] $\gets$  $\max$(z[i], 1)
+\EndIf
+\If{($T_1 < 0$) \& ($T_2> \Tmax$)}
+\State z[i] $\gets$  $\max$(z[i], 1)
+\EndIf
+\EndFor
+\State $d$ $\gets$ $\sqrt{2\gamma\log(\Tmax)\,count\_conse(iind[,2])}+\gamma \log(\Tmax)/3* \max(z) $
+\State \Return $d$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!h]
+\caption{count\_conse}
+\begin{algorithmic}[1] 
+\Use count\_conse(x)
+  \Desc Computation of consecutive ?
+  \Input x; array of ?
+\Output res; 
+\algrule
+
+\State count $\gets$ 0
+\State conse $\gets$ 1
+\State i $\gets$ 1
+\State n $\gets$ length(x)
+\If{(!n)}
+\State \Return 0
+\EndIf
+\State compare $\gets$ x[1]
+\State x[n+1] $\gets$ -1 \Comment{length of x is increased}
+\While{($i\leq n$)}
+\If{(x[i+1]==compare)}
+\State conse $\gets$ conse + 1
+\Else
+\State count $\gets$ count + conse*(conse-1)
+\State conse $\gets$ 1
+\State compare $\gets$ x[i+1]
+\EndIf
+\State i $\gets$ i+1
+\EndWhile
+\State res $\gets$ n+ count
+\State \Return res
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!h]
+\caption{countspike}
+\begin{algorithmic}[1] 
+\Use countspike(spike, del, k, t)
+  \Desc Computation of the numbers of spikes such that ?
+  \Input spike; array of spike times
+\Input del; $\delta$
+\Input k; partition index
+\Input t; spike time
+\Output resuk;
+\algrule
+\State resuk $\gets$ 0; N $\gets$ length(spike); $\varepsilon$ $\gets$ 1e-12
+\For{(i=1:N)} \Comment{N should be $\geq 1$!}
+\If{(spike[i]$\geq$ (t-(k+1)*del)) \& (spike[i]< (t-k*del-$\varepsilon$))} \Comment{$\varepsilon$ for numerical errors}
+\State resuk $\gets$ resuk + 1
+\EndIf
+\EndFor
+\State \Return resuk
+\end{algorithmic}
+\end{algorithm}
+
+
+%%%%
+% algo de b
+%%%
+
+\begin{algorithm}[!h]
+\caption{Full computation of $d$}
+\begin{algorithmic}[1] 
+\Use computed(spike, del, K)
+  \Desc Full computation of $d$ using \textit{count\_conse} and \textit{countspike} functions
+  \Input spike; array of spike times
+\Input del; $\delta$
+  \Input K; number of partitions
+\Output d; (K+1) vector (see \ref{}) % equation de d
+\algrule
+% \\\hrulefill
+\State N $\gets$ length(spike)
+\State d $\gets$ vector(length=K+1, mode='numeric') \Comment{initialization} 
+\If{missing(A)} \Comment{one needs to compute $A$ - see }
+\State A $\gets$ matrix(-2, nrow=N, ncol=N) 
+\For{k=0:(K-1)}
+\State A $\gets$ countpair(spike, del, k, A)[[2]]
+\EndFor
+\EndIf
+\State d[1] $\gets\sqrt{2\,\gamma\,\log{\Tmax}\,N}+\gamma\,\log{\Tmax}/3.$
+\For{k=0:(K-1)}
+\State d[k+2] $\gets$ compute\_d(spike, del, $\Tmax$, A, k, gamma)
+\EndFor
+\State \Return b
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+
+%%%%
+% algo de G
+%%%
+
+\begin{algorithm}[!h]
+\caption{Full computation of $G$}
+\begin{algorithmic}[1] 
+\Use computeG\_V1(spike, delta, Tmax, A)
+  \Desc Full computation of $G$
+  \Input spike; array of spike times
+\Input delta; $\delta$
+\Input $\Tmax$; final time
+\Input A; matrix 
+\Output G; (K+1)-by-(K+1) matrix (see \ref{}) % equation de d
+\algrule
+% \\\hrulefill
+\State N $\gets$ length(spike)
+\State K $\gets$ floor(Tmax/delta)
+\If{missing(A)} \Comment{one needs to compute $A$ - see }
+\State A $\gets$ computeA(spike, delta, K)
+\EndIf
+\State G $\gets$ matrix(0, nrow=K+1, ncol=K+1) \Comment{initialization}
+\If{K$>2$}
+\For{l=0:(K-2)} \Comment{computation of the lower part of G}
+\For{k=(l+1):(K-1)}
+\State rescase1 $\gets$ 0; rescase2 $\gets$ 0
+\Comment{1st case}
+\State iind $\gets$ which(A==(k-l), arr.ind=TRUE) \Comment{matrix indices}
+\State lidex $\gets$ nrow(iind)
+\For{idex=1:lidex} \Comment{lidex needs to be $>0$}
+\State inter\_fi $\gets$ $\min(spike[iind[idex,1]]+(k+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[iind[idex,2]]+l*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase1 $\gets$ rescase1 + length\_inter
+\EndIf
+\EndFor
+\State iind $\gets$ which(A==(k-l-1), arr.ind=TRUE) \Comment{matrix indices}
+\State lidex $\gets$ nrow(iind)
+\For{idex=1:lidex} \Comment{lidex needs to be $>0$}
+\State inter\_fi $\gets$ $\min(spike[iind[idex,1]]+(k+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[iind[idex,2]]+l*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase1 $\gets$ rescase1 + length\_inter
+\EndIf
+\EndFor
+\algstore{algG}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!h]
+%\caption{Full computation of $G$}
+\begin{algorithmic}[1] 
+\algrestore{algG}
+\State iind $\gets$ which(A==(k-l-1), arr.ind=TRUE) \Comment{2nd case, iind contains matrix indices}
+\State lidex $\gets$ nrow(iind)
+\For{idex=1:lidex} \Comment{lidex needs to be $>0$}
+\State inter\_fi $\gets$ $\min(spike[iind[idex,2]]+(l+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[iind[idex,1]]+k*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase2 $\gets$ rescase2 + length\_inter
+\EndIf
+\EndFor
+\State G[k+2,l+2] $\gets$ rescase1 + rescase2
+\EndFor
+\EndFor
+\For{k=0:(K-1)} \Comment{$k=l$}
+\State rescase1 $\gets$ 0
+\State iind $\gets$ which(A==0, arr.ind=TRUE) \Comment{matrix indices}
+\State lidex $\gets$ nrow(iind)
+\For{idex=1:lidex} \Comment{lidex needs to be $>0$}
+\State inter\_fi $\gets$ $\min(spike[iind[idex,1]]+(k+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[iind[idex,2]]+k*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase1 $\gets$ rescase1 + length\_inter
+\EndIf
+\EndFor
+\State rescase3 $\gets$ 0
+\For{idex=1:N} \Comment{N should be $>0$!}
+\State inter\_fi $\gets$ $\min(spike[i]+(k+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[i]+k*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase3 $\gets$ rescase3 + length\_inter
+\EndIf
+\EndFor
+\State G[k+2,k+2] $\gets$ 2*rescase1 + rescase3
+\EndFor
+\Comment{1st column of $G$}
+\algstore{algG1}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!h]
+%\caption{Full computation of $G$}
+\begin{algorithmic}[1] 
+\algrestore{algG1}
+\State G[1,1] $\gets \Tmax$
+\For{k=0:(K-1)}
+\State rescase $\gets$ 0
+\For{i=1:N} \Comment{N should be $>0$!}
+\State inter\_fi $\gets$ $\min(spike[i]+(k+1)*\delta,\Tmax)$
+\State inter\_de $\gets$ $\max(spike[i]+k*\delta,0)$
+\State length\_inter $\gets$ inter\_fi - inter\_de
+\If{length\_inter>0}
+\State rescase $\gets$ rescase + length\_inter
+\EndIf
+\EndFor
+\State G[k+2,1] $\gets$ rescase
+\EndFor
+\EndIf
+\State  lowG $\gets$ lower.tri(G)  \Comment{to get the strictly lower triangular part}
+\State  G[upper.tri(G)] $\gets$ G[lowG][order(row(G)[lowG], col(G)[lowG])] \Comment{to make G symmetric}
+\State \Return G
+\end{algorithmic}
+\end{algorithm}
+
+
+%complexity
+
+
+\section{Ordinary Least Squares}
+\section{Lasso shooting algorithm}
+\begin{algorithm}[!h]
+\caption{Lasso shooting}
+\begin{algorithmic}[1] 
+%Algorithm
+%Step 1: Find the first index j such that T¡ > 0, calls jstart.
+%Step 2: From each index j from jstart, we 'look' back II¿ by define Tlow, and Tup.
+%Step 3: If we flnd the index ¿ such lhat T¿ belongs to the interval (Tlow,Tup], increase
+%count, and record it in the matrix ,4. \Me stop immediately when T¿ < Tlota.
+
+\Use countpair(T, $\delta$, k, A)
+  \Desc Computation of $A$
+  \Input T; array of spike times
+\Input $\delta$; delay
+  \Input k; number of partitions
+\Input A; $N$-by-$N$ matrix \Comment{$N$ is the number of spikes}
+\Output Returns $A$ after counting
+\algrule
+% \\\hrulefill
+\State initialization of $a$
+\State m $\gets$ 0
+\State $a^{old}$ $\gets$ $a$
+\While{($|F(a)-F(a^{old})|>\varepsilon$)}
+\For{i=0,K}
+\State $a_i$ $\gets$ 
+\State m $\gets$ m + 1
+\EndFor
+\EndWhile
+\State \Return $a$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Active set}
+\end{document}

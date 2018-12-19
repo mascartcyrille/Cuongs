@@ -1,0 +1,10 @@
+\contentsline {algorithm}{\numberline {1}{\ignorespaces Partial computation of $A$ and $b$: countpair function}}{3}{algorithm.1}
+\contentsline {algorithm}{\numberline {2}{\ignorespaces Full computation of $A$}}{4}{algorithm.2}
+\contentsline {algorithm}{\numberline {3}{\ignorespaces Full computation of $b$}}{5}{algorithm.3}
+\contentsline {algorithm}{\numberline {4}{\ignorespaces Full computation of $b$}}{6}{algorithm.4}
+\contentsline {algorithm}{\numberline {5}{\ignorespaces Partial computation of $d$}}{7}{algorithm.5}
+\contentsline {algorithm}{\numberline {6}{\ignorespaces count\_conse}}{8}{algorithm.6}
+\contentsline {algorithm}{\numberline {7}{\ignorespaces countspike}}{8}{algorithm.7}
+\contentsline {algorithm}{\numberline {8}{\ignorespaces Full computation of $d$}}{9}{algorithm.8}
+\contentsline {algorithm}{\numberline {9}{\ignorespaces Full computation of $G$}}{10}{algorithm.9}
+\contentsline {algorithm}{\numberline {10}{\ignorespaces Lasso shooting}}{12}{algorithm.10}

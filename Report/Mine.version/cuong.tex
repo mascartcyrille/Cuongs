@@ -1,0 +1,346 @@
+\documentclass{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{multicol}
+\usepackage{amsmath,amssymb,amsthm,amsfonts,mathtools,mathrsfs,bbm,bm,dsfont}
+\usepackage{pdfpages}
+\usepackage{titlesec}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{hyperref}
+\usepackage[margin=.5in]{geometry}
+\usepackage{marginnote}
+\usepackage{float}
+\usepackage[hypcap=false]{caption}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,matrix,positioning,fit,quotes}
+\usepackage[toc,page]{appendix}
+
+\algnewcommand\algorithmicto{\textbf{to}}
+\algrenewtext{For}[3]{%
+  \algorithmicfor\ #1 $\gets$ #2 \algorithmicto\ #3 \algorithmicdo
+}
+\algnewcommand\COMMENT[2][.25\linewidth]{%
+  \leavevmode\hfill\makebox[#1][l]{$\triangleright$~#2}
+}
+\algnewcommand\LCOMMENT[2][.4\linewidth]{%
+  \leavevmode\hfill\makebox[#1][l]{$\triangleright$~#2}
+}
+\algnewcommand\RETURN{\State \textbf{return} }
+
+\algnewcommand{\algorithmicgoto}{\textbf{go to}}%
+\algnewcommand{\GoTo}[1]{\algorithmicgoto~\ref{#1}}%
+
+\newcommand{\dd}{\mathop{}\,\mathrm{d}}
+
+\newcommand{\T}{\rule{0pt}{2.6ex}}       % Top strut
+\newcommand{\B}{\rule[-1.2ex]{0pt}{0pt}} % Bottom strut
+
+\DeclareMathOperator\argmin{argmin}
+
+\hypersetup{
+    % bookmarks=true,         % show bookmarks bar?
+    unicode=false,          % non-Latin characters in Acrobat’s bookmarks
+    pdftoolbar=false,       % show Acrobat’s toolbar?
+    pdfmenubar=false,       % show Acrobat’s menu?
+    pdffitwindow=false,     % window fit to page when opened
+    pdfstartview={FitH},    % fits the width of the page to the window
+    pdftitle={Report meeting on algorithms},    % title
+    pdfauthor={C.Mascart},  % author
+    pdfsubject={Algorithms for stochastic simulations},   % subject of the document
+    pdfcreator={C.Mascart}, % creator of the document
+    pdfproducer={C.Mascart},% producer of the document
+    pdfkeywords={}, 		% list of keywords
+    pdfnewwindow=true,      % links in new PDF window
+    colorlinks=true,        % false: boxed links; true: colored links
+    linkcolor=red,          % color of internal links (change box color with linkbordercolor)
+    citecolor=green,        % color of links to bibliography
+    filecolor=magenta,      % color of file links
+    urlcolor=cyan           % color of external links
+}
+
+\begin{document}
+	\chapter{A cruel lasso thesis}
+		We want to relate a response vector $Y\in\mathbb{R}^n$ and an input matrix $X\in\mathbb{R}^{n\times p}$ with a linear parameter $\beta\in\mathbb{R}^p$ and some noise $\epsilon\in\mathbb{R}^n$ \[Y=X\beta_0+\epsilon\]
+		\section{Ordinary Least square method}
+			We look for solutions of \[\min_{\beta}\|Y-X\beta\|_2^2, \|\cdot\|_2^2=\sum_{k=1}^n\cdot_k^2\]
+			We consider $\widehat{\beta}_{OLS}=\argmin_{\beta}\|Y-X\beta\|_2^2$ an estimator of $\beta$, and we can show that \[\widehat{\beta}_{OLS}=(X^TX)^\dagger X^TY\]
+			Then, when the $\epsilon_i$ are uncorrelated random variables with mean 0 and variance $\sigma_0^2$ \[\mathbb{E}\|X(\widehat{\beta}_{OLS}-\beta_0)\|_2^2=\sigma_0^2\times\sum_i\mathds1_{\lambda_i\neq0}\]
+
+			\subsection{For Hawkes process}
+				The intensity of a Hawkes process is $\lambda(t)=\mu+\sum_{k s.t. T_k<t}h(t-T_k)=\mu+\int_{-\infty}^{t^-}h(t-u)\dd N_u$\\
+				We want to find the constant $\mu$ and the $h$ functions, but the space is too large, so we parametrize by \begin{align}
+					f_a&=\sum_{k=00}^{K-1}a_k\phi_k\\
+					\phi_{00}&=(1,0,\dots),\,\phi_k=(0,\dots,0,\mathds1_{(k\delta,(k+1)\delta]})\\
+					a&=(a_{00}=\mu,a_0,\dots,a_{K-1})^T
+				\end{align}
+				Now we look at the linear predictable function $\psi$ transforming $f=(\mu,h)$ into (a candidate intensity) $\psi_t(f_a)=\mu+\int_{-\infty}^{t^-}h(t-u)\dd N_u$\\
+				Applied to the restriction $f_a$ \begin{align}
+					\psi_t(f_a)&=\sum_{k=00}^{K-1}a_k\psi_t(\phi_k)\\
+					\psi_t(\phi_{00})&=1,\,\psi_t(\phi_k)=\sum_{T<t}\mathds1_{(k\delta,(k+1)\delta]}(t-T)
+				\end{align}
+				So $\psi_t(\phi_k)$ is the number of spikes in the interval $(k\delta,(k+1)\delta]$ weighted by the time elapsed since the spike (integral of a piecewise constant function)\\
+
+				We pose $G_{kl}=\int_0^{T_{\text{max}}}\psi_t(\phi_k)\psi_t(\phi_l)\dd t$ and $b_k=\int_0^{T_\text{max}}\psi_t(\phi_k)\dd N_t$ and look for \[\text{minimize}\left\{a^TGa-2b^Ta\right\}\]
+				The least square estimator is then $\widehat{a}\in\argmin_a\left\{a^TGa-2b^Ta\right\}$, and assuming $G\ge c\times I_d$ then $\widehat{a}=G^{-1}b$\\
+				How good is the estimator? \[\mathbb{E}\|\psi_t(f_a)-\lambda\|_{\text{proc}}^2\le\frac{1}{c}\sum_k\mathbb{E}\left(\int_0^{T_{\text{max}}}\psi_t^2(\phi_k)\lambda_t\dd t\right)\]
+
+		\section{Lasso method}
+			The lasso estimator is $\widehat{\beta}\in\argmin_{\beta}\left\{\|Y-X\beta\|_2^2+2\lambda\|\beta\|_1\right\}$ which is equivalent of solving a 2-polynom in $\beta$.
+
+		\section{Lasso shooting}
+			We still want to minimize $\widehat{a}\in\argmin_a\left\{a^TGa-2b^Ta+2\|d^Ta\|_1\right\}$. The shooting algorithms simplifies the resolution by considering $n$ independent one-dimension optimization problem (one for each of $a$'s coordinate), and the solution is given by \[
+				a_i^*=\begin{cases}
+					\frac{b_i-\sum_{j\neq i}a_jG_{ij}-d_i}{G_{ii}},&\quad\text{if}\quad b_i-\sum_{j\neq i}a_jG_{ij}>d_i\\
+					\frac{b_i-\sum_{j\neq i}a_jG_{ij}-d_i}{G_{ii}},&\quad\text{if}\quad b_i-\sum_{j\neq i}a_jG_{ij}<-d_i\\
+					0,&\quad\text{otherwise}
+				\end{cases}
+			\]
+			Hence the following algorithm \begin{algorithm}[h]
+				\caption{Lasso shooting algorithm}
+				\begin{algorithmic}[1]
+					\State Initialize $m=1$ and $a^0$
+					\Repeat
+						\For{i}{00}{K-1}
+							\State Update $a_i$ following rule given above
+						\EndFor
+					\Until{$|F(a_m)-F(a_{m-1})|<\epsilon$}
+				\end{algorithmic}
+			\end{algorithm}
+
+			The computation of $a$ depends on the values of $G$, $b$ and $d$, but thanksfully one can compute them by simply counting the number of pair of events the difference of which are in the time bins $(k\delta,(k+1)\delta]$. They are stored in a matrix $A$:
+			\begin{algorithm}[h]
+				\caption{Counting the pairs}
+				\begin{algorithmic}
+					\Require{$T$; array of spike trains\\$\delta$; delay\\$k$; number of partitions}
+					\State count$\gets 0$, $N\gets$length$(T)$
+					\State $j_{\text{start}}\gets$ first index s.t. $T_j>0$
+					\For{$j$}{$j_{\text{start}}$}{$N$}
+						\State $i\gets j-1$
+						\State $T_{\text{low}}\gets T[j]-(k+1)\delta$, $T_{\text{up}}\gets T[j]-k\delta$
+						\While{$i>0$ \& $i<N$}
+							\If{$T_{\text{low}}>$spike$(i)$}
+								\State break
+							\ElsIf{spike$(i)<T_{\text{up}}$}
+								\State count$+=1$
+								\State $A_{ij}=k$
+							\EndIf
+							$i\gets i-1$
+						\EndWhile
+					\EndFor
+				\end{algorithmic}
+			\end{algorithm}
+
+			Knowing the matrix of $A$ we can now compute the remaining bits. First the matrix $G$:
+			\begin{algorithm}[h]
+				\caption{Compute $G_{kl}$ given $k$ and $l$}
+				\begin{algorithmic}
+					\For{l}{0}{K-1}
+						\For{k}{l+1}{K-1}
+							\State rescase1 = rescase2 = 0
+
+							\State Case 1
+							\ForAll{$(i,j)|A_{ij}=k-l$}
+								\State length$=\min(T_i+(k+1)\delta,T_{\text{max}})-\max(T_j+l\delta,0)$
+								\If{length$>0$}
+									\State rescase1+=length
+								\EndIf
+							\EndFor
+
+							\State Case 2
+							\ForAll{$(i,j)|A_{ij}=k-l-1$}
+								\State length$=\min(T_j+(l+1)\delta,T_{\text{max}})-\max(T_i+k\delta,0)$
+								\If{length$>0$}
+									\State rescase2+=length
+								\EndIf
+							\EndFor
+
+							\State $G_{(k+1)(l+1)}=$rescase1+rescase2
+						\EndFor
+					\EndFor
+					\For{k}{0}{K-1}
+						\State rescase1=0
+						\ForAll{$(i,j)|A_{ij}=0$}
+							\State length$=\min(T_i+(k+1)\delta,T_{\text{max}})-\max(T_i+k\delta,0)$
+								\If{length$>0$}
+									\State rescase1+=length
+								\EndIf
+						\EndFor
+						\For{i}{1}{N}
+							\State length$=\min(T_i+(k+1)\delta,T_{\text{max}})-\max(T_i+k\delta,0)$
+							\If{length$>0$}
+								\State rescase3+=length
+							\EndIf
+						\EndFor
+						\State $G_{(k+2)(k+2)}2\times=$rescase1$+$rescase3
+					\EndFor
+					\State $G_{11}=T_{\text{max}}$
+					\For{$k$}{$0$}{$K-1$}
+						\State rescase$=0$
+						\For{$i$}{$1$}{length(T)}
+							\State length$=\min(T_i+(k+1)\delta,T_{\text{max}})-\max(T_i+k\delta,0)$
+							\If{length$>0$}
+								\State rescase+=length
+							\EndIf
+						\EndFor
+						\State $G_{(k+2)(1)}=$rescase
+					\EndFor
+				\end{algorithmic}
+			\end{algorithm}
+
+			Then the matrix $d$ of errors:
+			\begin{algorithm}[h]
+				\caption{Computing d}
+				\begin{algorithmic}
+					\State d=zeros(K+1,1)
+					\State d(1)=$\sqrt{2*\gamma*\log(T_{\text{max}})*N}+\frac{\gamma*\log(T_{\text{max}})}{3}$
+					\For{k}{0}{K-1}
+						\State d(k+2)=\Call{computed}{}
+					\EndFor
+					\Function{computed}{$A$, del, spike, $T_{\text{max}}$, $k$, $\gamma$}
+						\For{$i$}{1}{length{spike}}
+							\If{$\text{spike}(i)+(k+1)*\text{del}\leq T_{\text{max}}$\&$\text{spike}(i)+(k+1)*\text{del}\geq 0$}
+								\State $z(i)=$\Call{countspike}{spike, del, $k$, $\text{spike}(i)+(k+1)*\text{del}$}
+							\EndIf
+							\If{$\text{spike}(i)+k*\text{del}<T_{\text{max}}$\&$\text{spike}(i)+k*\text{del}\geq 0$}
+								\State $z(i)=\max(z(i),1)$
+							\EndIf
+						\EndFor
+						\State $I_{\text{col}}=\{i|A_{ij}=k\}$
+						\State count = 0, conse = 1
+						\If{isempty$(I_{\text{col}})$}
+							\State res = 0
+						\Else
+							\State compare$=x(1)$
+							\State $x_{n+1}=-1$
+							\While{$i\leq n$}
+								\If{$x_{i+1}=$compare}
+									\State conse += 1
+								\Else
+									\State $\text{count}+=\text{conse}*(\text{conse}-1)$
+									\State conse = 1
+									\State compare = $x_{i+1}$
+								\EndIf
+								\State i += 1
+							\EndWhile
+							\State $\text{res}=n+\text{count}$
+						\EndIf
+						\State $d_k=\frac{\gamma*\log(T_{\text{max}})}{3}*\max(z)+\sqrt{2*\gamma*\log(T_{\text{max}})*\text{res}}$
+					\EndFunction
+				\end{algorithmic}
+			\end{algorithm}
+
+			\begin{algorithm}[!h]
+				\caption{countspike}
+				\begin{algorithmic}[1]
+					\State resuk $\gets$ 0; $N\gets$ length(spike); $\varepsilon\gets$ 1e-12
+					\For{$i$}{1}{$N$} \Comment{N should be $\geq 1$!}
+						\If{$(\text{spike}[i]\geq(t-(k+1)*\text{del}))$ \& $(\text{spike}[i]< (t-k*\text{del}-\varepsilon))$} \Comment{$\varepsilon$ for numerical errors}
+							\State resuk += 1
+						\EndIf
+					\EndFor
+					\State \Return resuk
+				\end{algorithmic}
+			\end{algorithm}
+
+			Now, having $b, G\text{ and }d$ we can implement the Lasso shooting algorithm:
+			\begin{algorithm}[h]
+				\caption{The Lasso algorithm}
+				\begin{algorithmic}
+					\State $a=(0,\dots,0)$
+					\Repeat
+						\State $a_{\text{old}}=a$
+						\For{$i$}{1}{$K+1$}
+							\State $J=\{j\neq i \& j\leq K+1\}$
+							\State $z=b_i-G_{ii}*a_{i}$
+							\If{$|z|\leq d_i$}
+								\State $a^*=0$
+							\ElsIf{$z>d_i$}
+								\State $a^*=(z-d_i)/G_{ii}$
+							\Else
+								\State $a^*=(z+d_i)/G_{ii}$
+							\EndIf
+						\EndFor
+						\State $\text{las}=a^T*G*a-2*b^T*a+2*d^T*|a|$
+						\State $\text{las}_{\text{old}}=a_{\text{old}}^T*G*a_{\text{old}}-2*b^T*a_{\text{old}}+2*d^T*|a_{\text{old}}|$
+					\Until{$|\text{las}-\text{las}_{\text{old}}|<\epsilon$}
+				\end{algorithmic}
+			\end{algorithm}
+
+	\chapter{Active sets and optimisations}
+		\section{Model}
+			$y\in\mathbb{R}^{dn}$ a signal recorded by $d$ sensors\\
+			Generated by $k$ (fixed) neurons\\
+			$n$: number of recordings (time length) (=number of samples)
+			H is the convolution between the shape (=action potential) of the neurons
+			\begin{equation*}
+				x=x
+			\end{equation*}
+		\section{Lasso}
+			We assume some sparsity on $a$.\\
+			LASSO: $\min_{a\in\mathbb{R}^{kn}}\underbrace{\frac{1}{2}\|y-Ha\|_2^2+\lambda\|a\|_1}_{:=F(a)}$, with $\lambda>0$\\
+			F is strictly convex but not differentiable$\Rightarrow$need a generalisation of differentiable to sub-differentiable\\
+			\subsection{Subdifferentiability}
+				Def: for $g:\mathbb{R}^p\rightarrow\mathbb{R}$ convex and $a$ vector $\omega$ on $\mathbb{R}^p$ \begin{equation*}
+					\partial g(\omega)=\{z\in\mathbb{R}^p|\underbrace{g(\omega)+z^T(\omega'-\omega)}_{\text{tangente: }\forall\omega'\in\mathbb{R}^p}\leq g(\omega')\}
+				\end{equation*}
+				Ex: $\partial g(\omega)=\{\nabla g(\omega)\}$ if $g$ is convex and differentiable
+				For the absolute value $\partial H(0)=[-1,1]$
+				Prop: $\omega^*\in\mathbb{R}^p$ is a global minimum of $g$ iif $0\in\partial g(\omega^*)$
+		\section{Improving the Lasso with an active set dynamic constraint}
+			F is strictly convex but not differentiable\\
+			$\partial F(a)=H^T(Ha-y)+\lambda\partial\|\cdot\|_1(a)$, with $\partial\|\cdot\|(a)=\{x\in\mathbb{R}^{kn}\begin{cases}x_j=\text{sign}(a_j),&\text{if }a_j\neq 0\\x_j=[-1,1],&\text{else}\end{cases}\}$\\
+			$a^*$ is a minimum of $F$ iif $\forall j\in\{1,\dots,kn\},\begin{cases}H_j^T(y-Ha)=\lambda\text{sign}(a_j^*),&\text{if }a_j^*\neq 0\\|H_j^T(y-Ha^*)|\leq\lambda&\text{else}\end{cases}$\\
+			In particular: $|H_j^T(Ha^*-y)|<\lambda\Rightarrow a_j^*=0$ (ST)\\
+			Instead of solving LASSO in $\mathbb{R}^{kn}$, we will start from $a=0$ and activate the meaningfull variables, and stop when the (ST) condition is met $\forall j$
+			\begin{algorithm}[h]
+				\caption{Active set 1}
+				\begin{algorithmic}
+					\State $a\gets 0$, $g\gets|H^T(y-Ha)|$, $j\gets\text{argmax}_l g_l$
+					\State Active set: $J=\{j\}$
+					\While{An arbitrary condition is not met (eg: $m<kn-1$)}
+						\State $a\gets$Lasso solution on $J$
+						\State $g\gets|H^T(y-Ha)|$
+						\State $j\gets\text{argmax}_{l\notin J}g_l$
+						\If{$g_j>\lambda+\epsilon$}
+							\State $J+=\{j\}$
+						\Else
+							\State break
+						\EndIf
+					\EndWhile
+				\end{algorithmic}
+			\end{algorithm}
+
+		\section{Speeding up some matrix multiplications}
+			$R:=y-\underbrace{Ha}_{\text{too expensive}}$ ($H\in\mathbb{R}^{dn\times kn}$, typically $d=5, k=5, n=10^5$)\\
+			\begin{align*}
+				(Ha)_i	&=\sum_{j=1}^{kn}H_{ij}a_j\\
+						&=\sum_{j\in J}H_{ij}a_j\\
+						&=\sum_{j=1}^{\text{card}(J)}\widetilde H_{ij}\widetilde a_j=\widetilde H\widetilde a\rightarrow\begin{cases}\widetilde H=(H_j)_{j\in J}\\\widetilde a=a_J\end{cases}
+			\end{align*}
+			We end up only having to compute the elements from the active set reducing a lot the overall complexity.
+
+		\section{Some more matrix multiplication speeding up}
+			We can compute $R$ faster, but can we speed up $H^TR$?\\
+			$H^TR$: "correlation between the shapes of the spikes and $R$"
+			Current a set $J$\\
+			New variable $j$ in the active set\\
+			How to update the information?\\
+			$|\text{mod}(J,n)-\text{mod}(j,n)|\geq t$, solve LASSO on $1-D$: LASSO$(y,\underbrace{H_j}_{\in\mathbb{R}^{dn}},0)$
+			$J=\{1,2,10,50\}=\{1,2\}\cup\{10\}\cup\{50\}$
+
+	\chapter{Some improvements about the algorithms}
+
+	\appendices
+		If $A$ is a matrix\begin{itemize}
+		\item $A^T$ is the transpose of the matrix ($\forall(i,j), \left(A^T\right)_{ij}=A_{ji}$)
+		\item $A^*$ is the conjugate transpose ($\forall(i,j), \left(A^*\right)_{ij}=\overline{A_{ji}}$)
+		\item $A^\dagger$ is the pseudo-inverse of the matrix $A$, which is a generalisation of the inverse of a matrix. The pseudo-inverse verify 4 properties:\begin{align}
+				AA^{\dagger}A				&=A\\
+				A^{\dagger}AA^{\dagger}		&=A^{\dagger}\\
+				\left(AA^{\dagger}\right)^*	&=AA^{\dagger}\\
+				\left(A^{\dagger}A\right)^*	&=A^{\dagger}A
+			\end{align}
+		\end{itemize}
+\end{document}
