@@ -1,0 +1,363 @@
+%
+% Se compile en utilisant le Makefile (sage inside)
+%
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amssymb,amsmath}
+\usepackage{hyperref}
+\usepackage[latin1]{inputenc}
+\usepackage{enumitem}
+%\usepackage{sagetex}
+\usepackage{mathabx}
+\usepackage{dsfont}
+\usepackage[ruled]{algorithm}
+\usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+\algrenewcommand{\algorithmiccomment}[1]{\hfill \# {\scriptsize #1}} 
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+\algnewcommand\algodesc{\textbf{Description:}}
+\algnewcommand\Desc{\item[\algodesc]}
+\algnewcommand\algouse{\textbf{Usage:}}
+\algnewcommand\Use{\item[\algouse]}
+\newcommand{\be}{\begin{eqnarray*}}
+\newcommand{\ee}{\end{eqnarray*}}
+\newcommand{\ben}{\begin{eqnarray}}
+\newcommand{\een}{\end{eqnarray}}
+\newcommand{\dsp}{\displaystyle}
+\makeatletter
+\newcommand{\algrule}[1][.2pt]{\par\vskip.5\baselineskip\hrule height #1\par\vskip.5\baselineskip}
+\makeatother
+
+\DeclareMathOperator\erf{erf}
+\def\E{\mathbb{E}}
+\def\R{\mathbb{R}}
+\def\mzero{\widehat{m}_0}
+\def\vsq{\widehat{v}^2}
+\def\P{\mathbb{P}}
+\def\UN{\mathds{1}}
+\def\Ik{\mathbb{I}_k}
+\def\Ikun{\mathbb{I}_{k_1}}
+\def\Ikdeux{\mathbb{I}_{k_2}}
+\def\Il{\mathbb{I}_l}
+\def\Im{\mathbb{I}_m}
+\def\Tmin{T_{\min}}
+\def\Tmax{T^{\max}}
+\def\Ikm{\mathbb{I}_{\scriptscriptstyle{k-1}}}
+\def\Nltk{N^{(l)}_{[t-k\delta,t-(k-1)\delta[}}
+\def\NlTk{N^{(l)}_{[T-k\delta,T-(k-1)\delta[}}
+\def\Nluntkun{N^{(l_1)}_{[t-k_1\delta,t-(k_1-1)\delta[}}
+\def\Nldeuxtkdeux{N^{(l_2)}_{[t-k_2\delta,t-(k_2-1)\delta[}}
+\title{Lasso for Hawkes process}
+
+\begin{document}
+\maketitle
+\date
+    \section{Notation and definition (may be imprecise)}
+\begin{itemize}
+  \item $M$, total number of neurons
+\item $K$, number of bins
+  \item $\delta$, size
+\item $Ntot$, total number of spikes
+\item $\Ik=]{(k-1)}\,\delta,\:k\,\delta]=({(k-1)}\,\delta,\:k\,\delta], \ \ \forall\,k \,\in \ldbrack 1, K\rdbrack$
+\item for any $\theta$, $k \in \ldbrack 1, K\rdbrack$, $\theta+\Ik$ is an interval such that $$ \theta+\Ik=(\theta+\Ik)=]\theta+(k-1)\delta,\theta+k\,\delta]=(\theta+(k-1)\delta,\theta+k\,\delta]$$
+\item for any $\theta$, $k \in \ldbrack 1, K\rdbrack$, $\theta-\Ik$ is an interval such that $$\theta-\Ik=(\theta-\Ik)=[\theta-k\,\delta,\theta-(k-1)\,\delta[=[\theta-k\,\delta,\theta-(k-1)\,\delta)$$
+  \item $A$ is the scope, such that $A=K\,\delta$ and a maximum length. If the distance between two spikes is strictly greater than $A$, they don't influence each other
+  \item $\Tmin$ is the  beginning of the study time interval
+  \item $\Tmax$ is the end of the study time interval
+\item $Int(x)=\lfloor x \rfloor$ represents the integer part of $x$
+  \item $\lambda^{(r)}$ is the functional intensity of neuron $r$, function depending on time
+\item $\mu^{(r)}$ is the spontaneous part of $\lambda^{(r)}$
+\item $\mathcal{N}^{(l)}$ is the set of spike values of neuron $l$
+\item $N^{(l)}_{t-\Ik}=N^{(l)}_{[t-k\delta,t-(k-1)\delta[}$ represents the number of spikes $\theta$ of $\mathcal{N}^{(l)}$ such that $$\theta\in (t-\Ik)=[t-k\delta,t-({k-1})\delta[$$
+\be
+N^{(l)}_{t-\Ik}=N^{(l)}_{[t-k\delta,t-(k-1)\delta[}=\sum_{\substack{\theta<t,\\ \theta\in\,\mathcal{N}^{(l)}}}\mathds{1}_{\Ik}(t-\theta) \, \, \forall \, t
+ \ee
+\end{itemize}
+\section{Problem}
+We want to solve several minimization problems
+\be
+\min_{a_r\in\R^{(1+MK)}} \dsp\frac{1}{2}a_r^t\,\mathbf{G}\,a_r-b_r^t\,a_r+d_r^t\,|a_r| \ \ \quad \quad (\mathcal{P}_{min}^{(r)})
+\ee
+where $|v|$ is a vector such that $|v|_i=|v_i|\, \, \forall i$.\\
+$b$ and $d$ are matrices of size $(1+MK)$-by-$M$, so, for any $r$, $b^{(r)}$ and $d^{(r)}$ are vectors of $\R^{(1+MK)}$ and are the rth column of $b$ and $d$, respectively.\\
+In the following, We use the class \textit{DataSpike}. A \textit{DataSpike} instance has two public attributes:
+\begin{itemize}
+\item \textit{\_T}: an array of double values containing all spike values independently of the neuron numbers. Values are sorted. \textit{\_T} has only one row.
+\item \textit{\_neur}: an array of integer values of the same size of \textit{\_T} containing the neuron numbers.
+\end{itemize}
+In the algorithms, an instance of the class \textit{DataSpike} is replaced by a matrix of double values with two rows.
+
+\section{Auxiliary functions}
+We define the following variables
+\begin{itemize}
+\item $\alpha$ is the first index of $T$ such that $T[\alpha]> \Tmin$
+\item $\beta$ is the last index of $T$ such that $T[\beta]\leq \Tmax$
+\item $depart$ is the first index of $T$ such that $T[depart]> \Tmin-A$
+\item $departbis$ is the last index of $T$ such that $T[departbis]\leq \Tmax-A$
+\end{itemize}
+\textit{get\_low\_index} and \textit{get\_up\_index} are functions which define $\alpha$, $\beta$, ...
+\begin{itemize}
+\item \textit{get\_low\_index} function works as follows:
+\be
+\hbox{get\_low\_index}(x, T) = \gamma \hbox{ where } \gamma \hbox{ is the first index of T such that }T[\gamma]> x 
+\ee
+\item \textit{get\_up\_index} function works as follows:
+\be
+\hbox{get\_up\_index}(x, T) = \gamma \hbox{ where } \gamma \hbox{ is the last index of T such that }T[\gamma]\leq x 
+\ee
+\end{itemize}
+
+\begin{algorithm}[!h]
+\caption{$get\_low\_index$ function}
+\begin{algorithmic}[1] 
+\Use get\_low\_index(x, T)
+  \Desc Computation of ind, the first index in $T$ such that $T[ind]> x$
+  \Input x; scalar value
+\Output ind - integer
+\State ind $\gets$ 1
+\State n $\gets$ length(T)
+\While{(ind$<$(n+1))}
+\If{(T[ind]$\leq$x)}
+\State ind $\gets$ ind+1
+\Else
+\State break
+\EndIf
+\EndWhile
+\State \Return ind
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[!h]
+\caption{$get\_up\_index$ function}
+\begin{algorithmic}[1] 
+\Use get\_up\_index(x, T)
+  \Desc Computation of ind, the last index in $T$ such that $T[ind]\leq x$
+  \Input x; scalar value
+\Output ind - integer
+\State ind $\gets$ length(T)
+\While{(ind$\geq$1)}
+\If{(T[ind]$>$x)}
+\State ind $\gets$ ind-1
+\Else
+\State break
+\EndIf
+\EndWhile
+\State \Return ind
+\end{algorithmic}
+\end{algorithm}
+
+\textit{get\_k} function works as follows:
+\be
+get\_k(x, \delta) = \left\{
+\begin{array}{lll}
+k&= \hbox{Int}(\dsp\frac{x}{\delta})+1 = \lfloor\dsp\frac{x}{\delta} \rfloor+1 &\hbox{if } {x > k\delta},\\[10pt]
+k &= \hbox{Int}(\dsp\frac{x}{\delta}) = \lfloor\dsp\frac{x}{\delta} \rfloor &\hbox{if }{x \equiv k\delta}
+\end{array}
+\right.
+\ee
+or $get\_k(x,\delta) = k\, \geq 1$ such that $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$
+
+For example $get\_k(1.5\,\delta, \delta)= 2$ and $get\_k(\delta, \delta)= 1$.
+
+\begin{algorithm}[!h]
+\caption{$get\_k$ function}
+\begin{algorithmic}[1] 
+\Use get\_k(x, delta, eps)
+  \Desc Computation of k such that $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$
+  \Input x; scalar value
+\Input delta; $\delta$
+\Input eps; for numerical precision, default value 1e-12 (optional argument)
+\Output k; integer
+\State k $\gets$ floor(x/delta) + 1
+\If{$|k*delta -x|< eps$}
+\State \Return k
+\EndIf
+\If{$|(k-1)*delta -x|< eps$}
+\State \Return k-1
+\EndIf
+\State \Return k
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Computation of b}
+\be
+b^{(r)} = \left(
+\begin{array}{ll}
+  &\#^{(r)} = \# \left\{T: \Tmin<T\leq\Tmax,T\in \mathcal{N}^{(r)}\right\}\\
+  &\cdots\\
+&\dsp\int_{\Tmin}^{\Tmax}N^{(l)}_{[t-k\delta,t-(k-1)\delta[}\,dN^{(r)}_t = \dsp\int_{\Tmin}^{\Tmax}N^{(l)}_{t-\Ik}\,dN^{(r)}_t =\dsp\sum_{\substack{\Tmin<T\leq\Tmax,\\T\in \mathcal{N}^{(r)}}}\,\sum_{\substack{\theta<T,\\ \theta\in\,N^{(l)}}}\mathds{1}_{\Ik}(T-\theta) \\
+  &\cdots
+\end{array}
+\right)
+\ee
+\fbox{WARNING}
+\begin{itemize}
+\item In what follows, numbering starts at 1 (think Matlab/Octave and R) and you should be careful when it differs.
+%\item We always assume that no spike is equal to $\Tmin$ or $\Tmax$ for the sake of simplicity.
+\item In what follows\\ $for(i= \alpha:\beta)$ is empty if $\alpha> \beta$ (unlike what happens in R)
+\end{itemize}
+
+
+
+  \begin{algorithm}[!h]
+\caption{Computation of $b$}
+\begin{algorithmic}[1] 
+%\Use compute\_b(M, K, Tmin, Tmax, T, neur, delta)
+\Use compute\_b(M, K, Tmin, Tmax, DS, delta)
+  \Desc Computation of b - numbering of neurons and k starts at 1
+  \Input M; integer - number of neurons
+  \Input K; integer - number of bins
+\Input Tmin - minimum time
+\Input Tmax - maximum time
+\Input DS - DataSpike: matrix with two rows, the first one contains spike values (every spikes in a single row), the second one contains the neuron numbers to identify them in the first one
+%\Input T - flattened array of spike values (every spikes in a single row)
+%\Input neur - array of neuron numbers to identify them in T
+\Input delta - $\delta$
+\Output b - (1+M*K)-by-M matrix%, as in the Lasso problem $\min 1/2 \, x^t\,A\,x+b^t $ with constraints on $d$
+\Output low - array of size Ntot(=length(T)), taking into account the scope
+\Output cnt - array of size M, containing $\#^{(r)}$
+\State T $\gets$ DS[1,]  \Comment{first row of DS: all spike values}
+\State neur $\gets$ DS[2,] \Comment{second row of DS: neuron numbers}
+\State Ntot $\gets$ length(T) \Comment{total number of spikes}
+\State A $\gets K*\delta$ \Comment{scope}
+\State b $\gets$ matrix(0, nrow=(1+M*K), ncol= M) \Comment{init of b}
+\State low $\gets$ vector(mode='integer', length=Ntot) \Comment{init of low - for the State}
+\State cnt $\gets$ vector(mode='integer', length=M) \Comment{init of cnt - for the algo}
+\State ilow $\gets$ 1
+\State eps $\gets$ 1.e-12 \Comment{for numerical precision}
+\For{(i=1:Ntot)} \Comment{loop over spikes}
+\State t $\gets$ T[i]; r $\gets$ neur[i]
+\While{$(|T[ilow]-t|>A)$}
+\State ilow $\gets$ ilow+1
+\EndWhile
+\State low[i] $\gets$ ilow
+\If{($\Tmin<t\leq\Tmax$)}
+\State cnt[r] $\gets$ cnt[r]+1
+\EndIf
+\For{(j=ilow:(i-1))}
+\If{($|t-T[j]|<eps$)}
+\State break
+%\State next \Comment{same instruction as continue, the spike should be $<t$}
+\EndIf
+\State k $\gets$ get\_k((t-T[j])/delta)+1 \Comment{more complex than integer part}
+\State l $\gets$ neur[j]
+%\State b[(r-1)*(K+1)+k+1, r] += 1
+\State b[(l-1)*K+k+1, r] $\mathrel{+}=$ 1
+\EndFor
+\EndFor
+\State b[1,]  $\gets$ cnt \Comment{1st line of b}
+\State \Return b, low, cnt
+\end{algorithmic}
+\end{algorithm}
+\clearpage
+\vspace*{-2cm}
+\section{Computation of G}
+G is a matrix of size $(1+MK)$-by-$(1+MK)$
+\begin{itemize}
+  \item{First row or first column of G}
+\be
+G_{0,l,k}&=&\int_{\Tmin}^{\Tmax}\Nltk\,dt\\
+&=& \int_{\Tmin}^{\Tmax}\,\sum_{\substack{\theta<t,\\ \theta\in\,\mathcal{N}^{(l)}}}\mathds{1}_{\Ik}(t-\theta)\,dt\simeq \int_{\Tmin}^{\Tmax}\,\sum_{\substack{(t-A)\leq\theta<t,\\ \theta\in\,\mathcal{N}^{(l)}}}\mathds{1}_{\Ik}(t-\theta)\,dt \\
+ &\simeq& \int_{\Tmin}^{\Tmax}\,\sum_{\substack{(t-A)\leq\theta<t,\\ \theta\in\,\mathcal{N}^{(l)}}}\mathds{1}_{\Ik+\theta}(t)\,dt\\
+G_{0,l,k}&=&\int_{\Tmin}^{\Tmax}\Nltk\,dt \simeq  \sum_{\substack{\theta\in\,\mathcal{N}^{(l)},\\(\Tmin-A)\leq \theta < \Tmax}}\left( \min{(\Tmax, k\,\delta+\theta)}- \max{(\Tmin, (k-1)\,\delta+\theta)}\right)
+\ee
+\item{Inner part of G}
+\be
+G_{l_1,l_2,k_1,k_2}&=&\int_{\Tmin}^{\Tmax}\Nluntkun\,\Nldeuxtkdeux\,dt\\
+G_{(l_1,k_1),(l_2,k_2)}&=&\int_{\Tmin}^{\Tmax}\left(\sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\\  \tau< t}}\mathds{1}_{\Ikun+\tau}(t)\right)\,\left(\sum_{\substack{\theta\in\mathcal{N}^{(l_2)},\\\theta<t}}\mathds{1}_{\Ikdeux+\theta}(t)\right)\,dt\\
+&\simeq& \int_{\Tmin}^{\Tmax}\left(\sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\\  t-A\leq \tau< t}}\mathds{1}_{\Ikun+\tau}(t)\right)\,\left(\sum_{\substack{\theta\in\mathcal{N}^{(l_2)},\\t-A\leq \theta<t}}\mathds{1}_{\Ikdeux+\theta}(t)\right)\,dt\\
+&=& \sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\theta\in\mathcal{N}^{(l_2)},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{\Ikun+\tau}(t)\,\mathds{1}_{\Ikdeux+\theta}(t)\,dt\\
+&=& \sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\theta\in\mathcal{N}^{(l_2)},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{(\Ikun+\tau)\cap(\Ikdeux+\theta)\cap]\Tmin,\Tmax]}(t)\,dt
+\ee
+\end{itemize}
+\clearpage
+\begin{algorithm}[!h]
+\caption{Computation of $G$}
+\begin{algorithmic}[1] 
+\Use compute\_G(M, K, Tmin, Tmax, T, neur, delta, A)
+  \Desc Computation of b - numbering of neurons and k starts at 1
+\Input $\delta$; delta 
+  \Input M; integer - number of neurons
+  \Input K; integer - number of bins
+\Input Tmin - minimum time
+\Input Tmax - maximum time
+\Input T - flattened array of spike values (every spikes in a single row)
+\Input neur - array of neuron numbers to identify them in T
+\Input delta - size
+\Input A - scope, maximum distance to be taken into account
+\Output b - array of size (1+M*K)*M%, as in the Lasso problem $\min 1/2 \, x^t\,A\,x+b^t $ with constraints on $d$
+\State G $\gets$ matrix(0, nrow=(1+M*K), ncol= (1+M*K)) \Comment{init of G}
+\State G[1,1] $\gets \Tmax - \Tmin$
+\State A $\gets K*\delta$ \Comment{scope}
+\State depart $\gets$ get\_low\_index($(\Tmin-A)$, T)
+\State $\beta$ $\gets$ get\_up\_index($\Tmax$, T)
+\For{(i in depart:$\beta$)}
+\State ti $\gets$ T[i]; $l_1$ $\gets$ neur[i]
+\For{($k$ in (1:K))} \Comment{1st row and 1st column of G}
+\State $x_1$ $\gets \min{(\Tmax, ti+k\,\delta)}$
+\State $x_2$ $\gets \max{(\Tmin, ti+(k-1)\,\delta)}$
+\State $dx = x_1 - x_2$
+\If{$(dx>0)$}
+\State G[1,($l_1$-1)*K+$k$+1] += dx
+\State G[($l_1$-1)*K+$k$+1,1] += dx
+\EndIf
+\EndFor
+\For{(j in (low[i]:(i-1)))} \Comment{inner part of G, $l_1 \neq l_2$}
+\State tj $\gets$ T[j]; $l_2$ $\gets$ neur[j]
+\For{($k_1$ in (1:K))}
+\For{($k_2$ in (1:K))}
+\State $x_1$ $\gets \min{(\Tmax, ti+k_1\,\delta, tj+k_2\,\delta)}$
+\State $x_2$ $\gets \max{(\Tmin, ti+(k_1-1)\,\delta), (tj+(k_2-1)\,\delta)}$
+\State $dx = x_1 - x_2$
+\If{$(dx>0)$}
+\State G[($l_1$-1)*K+$k_1$+1,($l_2$-1)*K+$k_2$+1] += dx
+\State G[($l_2$-1)*K+$k_2$+1,($l_1$-1)*K+$k_1$+1] += dx
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+\For{($k_1$ in 1:K)} \Comment{$l_1==l_2$}
+\State $x_1$ $\gets \min{(\Tmax, ti+k_1\,\delta)}$
+\State $x_2$ $\gets \max{(\Tmin, ti+(k_1-1)\,\delta)}$
+\State $dx = x_1 - x_2$
+\If{$(dx> 0)$} \Comment{diagonal part}
+\State G[($l_1$-1)*K+$k_1$+1,($l_1$-1)*K+$k_1$+1] += dx
+\EndIf
+\algstore{algoG}
+\end{algorithmic}
+\end{algorithm}
+\begin{algorithm}[!h]
+\begin{algorithmic}[1] 
+\algrestore{algoG}
+\For{($k_2$ in ($k_1$+1):K)} \Comment{extradiagonal part}
+\State $x_2$ $\gets \max{(\Tmin, ti+(k_2-1)\,\delta)}$
+\State $dx = x_1 - x_2$
+\If{$(dx>0)$}
+\State G[($l_1$-1)*K+$k_1$+1,($l_1$-1)*K+$k_2$+1] += dx
+\State G[($l_1$-1)*K+$k_2$+1,($l_1$-1)*K+$k_1$+1] += dx
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+\State \Return G
+\end{algorithmic}
+\end{algorithm}
+
+\section{Computation of d}
+For $d$ we need the following quantity
+\be
+\mu_2^{(r)} = \left(
+\begin{array}{ll}
+  &\cdots\\
+&\dsp\int_{\Tmin}^{\Tmax}\left(N^{(l)}_{[t-k\delta,t-(k-1)\delta[}\right)^2\,dN^{(r)}_t = \dsp\int_{\Tmin}^{\Tmax}(N^{(l)}_{t-\Ik})^2\,dN^{(r)}_t \\
+  &\cdots
+\end{array}
+\right)
+\ee
+
+\end{document}
+
