@@ -114,9 +114,9 @@ We define the following variables
 \caption{$get\_low\_index$ function}
 \begin{algorithmic}[1] 
 \Use get\_low\_index(x, T)
-  \Desc Computation of ind, the first index in $T$ such that $T[ind]> x$
+  \Desc Computation of ind, the first index in $T$ such that $T[ind]> x$ (to be improved!)
   \Input x; scalar value
-\Output ind - integer
+\Output ind - integer. If there is no index satisfying the condition, the size of T + 1 is returned.
 \State ind $\gets$ 1
 \State n $\gets$ length(T)
 \While{(ind$<$(n+1))}
@@ -136,7 +136,7 @@ We define the following variables
 \Use get\_up\_index(x, T)
   \Desc Computation of ind, the last index in $T$ such that $T[ind]\leq x$
   \Input x; scalar value
-\Output ind - integer
+\Output ind - integer. If there is no index satisfying the condition, 0 is returned.
 \State ind $\gets$ length(T)
 \While{(ind$\geq$1)}
 \If{(T[ind]$>$x)}
@@ -194,11 +194,21 @@ b^{(r)} = \left(
 \end{array}
 \right)
 \ee
+For $b$ we use also the notation
+\be
+\mu_1^{(r)} = \left(
+\begin{array}{ll}
+  &\cdots\\
+&\dsp\int_{\Tmin}^{\Tmax}N^{(l)}_{[t-k\delta,t-(k-1)\delta[}\,dN^{(r)}_t = \dsp\int_{\Tmin}^{\Tmax}N^{(l)}_{t-\Ik}\,dN^{(r)}_t \\
+  &\cdots
+\end{array}
+\right)
+\ee
 \fbox{WARNING}
 \begin{itemize}
 \item In what follows, numbering starts at 1 (think Matlab/Octave and R) and you should be careful when it differs.
 %\item We always assume that no spike is equal to $\Tmin$ or $\Tmax$ for the sake of simplicity.
-\item In what follows\\ $for(i= \alpha:\beta)$ is empty if $\alpha> \beta$ (unlike what happens in R)
+\item In what follows\\ the loop $for(i= \alpha:\beta)$ is empty if $\alpha> \beta$ (unlike in R)
 \end{itemize}
 
 
@@ -237,7 +247,6 @@ b^{(r)} = \left(
 \State low[i] $\gets$ ilow
 \If{($\Tmin<t\leq\Tmax$)}
 \State cnt[r] $\gets$ cnt[r]+1
-\EndIf
 \For{(j=ilow:(i-1))}
 \If{($|t-T[j]|<eps$)}
 \State break
@@ -248,6 +257,7 @@ b^{(r)} = \left(
 %\State b[(r-1)*(K+1)+k+1, r] += 1
 \State b[(l-1)*K+k+1, r] $\mathrel{+}=$ 1
 \EndFor
+\EndIf
 \EndFor
 \State b[1,]  $\gets$ cnt \Comment{1st line of b}
 \State \Return b, low, cnt
@@ -348,7 +358,8 @@ G_{(l_1,k_1),(l_2,k_2)}&=&\int_{\Tmin}^{\Tmax}\left(\sum_{\substack{\tau\in\math
 \end{algorithm}
 
 \section{Computation of d}
-For $d$ we need the following quantity
+For $d$ we need the following quantities, $\mu_2$ is a $(1+MK)$-by-$M$ matrix.
+$\mu_A$ is a vector of dimension $(1+MK)$
 \be
 \mu_2^{(r)} = \left(
 \begin{array}{ll}
@@ -358,6 +369,17 @@ For $d$ we need the following quantity
 \end{array}
 \right)
 \ee
+\be
+\mu_A^{(r)} = \left(
+\begin{array}{ll}
+  &\cdots\\
+&\dsp\sup_{t\in]\Tmin,\Tmax]}|N^{(l)}_{[t-k\delta,t-(k-1)\delta[}|=\dsp\sup_{t\in]\Tmin,\Tmax]}|N^{(l)}_{t-\Ik}|\\
+  &\cdots
+\end{array}
+\right)
+\ee
+
+
 
 \end{document}
 
