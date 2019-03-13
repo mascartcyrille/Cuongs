@@ -1,0 +1,4 @@
+To run a test,
+python3 run_test.py
+
+data files are in ../data folder
