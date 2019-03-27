@@ -1,0 +1,18 @@
+* To install armadillo, run script ./install_arma.sh. In this script verify the version number of armadillo and the content of DESTDIR variable (the path of your armadillo install)
+
+* Update Makefile modifying armaPATH and armalib variables
+
+* To compile the code, run "make", it should create several *.exe files
+
+* Before running an example, you have to update LD_LIBRARY_PATH variable doing in your shell
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:ARMALIB  where ARMALIB is the path of armadillo library.
+For example on a Mac
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/MyInstall/armadillo-9.200.7/usr/local/lib/
+
+* To run examples, you can try
+./test3.exe "/tmp/MyTests"   # 1 neuron test, results are under /tmp/MyTests folder
+./test11.exe "/tmp/MyTests"  # 100 neuron test, results are under /tmp/MyTests fold
+
+G_*.txt contains matrix G  (1+M*K)-by-(1+M*K)
+Gk_*.txt contains the same matrix G from a slightly different computation (k1k2 method)
+b_*.txt contains matrix b  (1+M*K)-by-M

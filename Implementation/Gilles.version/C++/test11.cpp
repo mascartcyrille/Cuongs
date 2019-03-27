@@ -6,6 +6,7 @@ int main(int argc, char *argv[])
   if(argc==1)
     {
     outpath = "/workdir/gscarella/lassohawkes/C++/";
+    cout << endl;
     cout << "b and G matrices are written in "<< outpath <<" folder. If it is not ok for you, please add the correct path as an argument of the main function"<<endl;
     }
     else
