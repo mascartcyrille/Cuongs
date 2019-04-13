@@ -12,7 +12,7 @@ armalib= $(armaPATH)/lib64
 endif
 endif
 
-all: testV2.exe test11.exe computeGk1k2.exe test3.exe test_DataSpike.exe test_DataNeur.exe
+all: testV2.exe test11.exe computeGk1k2.exe test3.exe test_DataSpike.exe test_DataNeur.exe  test_lassoshooting.exe
 
 computeGk1k2.exe: computeGk1k2_V2.o misc.o computeG_V2.o computeb_V2.o test_computeGk1k2.o
 	g++ $(CXXFLAGS) $^ -o $@ -L$(armalib) -larmadillo
@@ -34,6 +34,9 @@ test_DataNeur.exe: test_DataNeur.o DataNeur.o misc.o
 
 test_DataSpike.o: test_DataSpike.cpp DataSpike.hpp 
 	g++ $(CXXFLAGS) -c -I$(armaPATH)/include -I. $< -o $@
+
+test_lassoshooting.exe: test_lassoshooting.o lassoshooting.o
+	g++ $(CXXFLAGS) $^ -o $@ -L$(armalib) -larmadillo
 
 %.o: %.cpp
 	g++ $(CXXFLAGS) -c -I$(armaPATH)/include -I. $< -o $@
