@@ -1,0 +1,921 @@
+% A compiler en faisant
+%
+% pdflatex -shell-escape slides.tex; pdflatex -shell-escape slides.tex;
+%
+\documentclass{beamer}
+\usetheme{shadow}
+\usepackage[latin1]{inputenc}
+%\usepackage{float}
+\usepackage[ruled]{algorithm}
+%\usepackage{pdflscape} %effet a tester
+\usepackage{algpseudocode}
+%\usepackage{algorithmicx}
+%\usepackage{algorithm,algorithmic}
+\algrenewcommand{\algorithmiccomment}[1]{\hfill {\scriptsize{\#}} {\scriptsize #1}} 
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+%\algnewcommand\item[\textbf{Input:}]{\item[\algorithmicinput]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+%\algnewcommand\item[\textbf{Output:}]{\item[\algorithmicoutput]}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+\algnewcommand\algodesc{\textbf{Description:}}
+%\algnewcommand\item[\textbf{Description:}]{\item[\algodesc]}
+\algnewcommand\Desc{\item[\algodesc]}
+\algnewcommand\algouse{\textbf{Usage:}}
+\algnewcommand\Use{\item[\algouse]}
+\makeatletter
+\newcommand{\algrule}[1][.2pt]{\par\vskip.5\baselineskip\hrule height #1\par\vskip.5\baselineskip}
+\makeatother
+%\uselanguage{french}
+\languagepath{french}
+\usepackage{listings}
+\usepackage{array}
+\usepackage{verbatim}
+\usepackage{textcomp}
+\usepackage{mathabx}
+\usepackage{amsmath}
+\usepackage{dsfont}
+\usepackage[justification=centering]{caption}
+\graphicspath{{figures/}{./}}
+%\deftranslation[to=french]{theorem}{th\'eor\`eme}
+\deftranslation[to=french]{Theorem}{Th\'eor\`eme}
+%\title{Hawkes process - Reconstruction 1 neuron}
+\title{Hawkes et Lasso}
+%\institute{LJAD - I3S $|$ \href{mailto:gscarella@i3s.unice.fr}{\scriptsize{gscarella@i3s.unice.fr}}}
+%\institute[]{LJAD - I3S\ \ \href{mailto:gscarella@i3s.unice.fr}{\scriptsize{gscarella@i3s.unice.fr}}}
+\newcommand{\dsp}{\displaystyle}
+\newcommand{\textapprox}{\raisebox{0.5ex}{\texttildelow}}
+\useoutertheme{infolines}
+\renewcommand\UrlFont{\color{blue}\rmfamily\upshape}
+\def\R{\mathbb{R}}
+\def\Ik{\mathbb{I}_k}
+\def\Ikm{\mathbb{I}_{\scriptscriptstyle{k-1}}}
+\def\Tmin{T_{\min}}
+\def\Tmax{T^{\max}}
+\newcommand{\be}{\begin{eqnarray*}}
+\newcommand{\ee}{\end{eqnarray*}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\begin{document}
+\definecolor{BlueGrey}{rgb}{0.8,0.9,0.9}
+\definecolor{lightyellow}{rgb}{1.0, 1.0, 0.88}
+\definecolor{DarkCyan}{rgb}{0, 0.55, 0.55}
+%\maketitle
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Contexte/ Objectifs}
+  \begin{itemize}
+  \item  D\'etection de d\'ependance entre neurones
+  \item On recherche, pour chaque neurone $r$, son intensit\'e fonctionnelle $\lambda^{(r)}(t)$: c'est la probabilit\'e d'un spike au temps $t$ pour le neurone.
+  \item Les intensités fonctionnelles sont modélisées par un processus de Hawkes
+  \item $\mathcal{N}^r$ est l'ensemble des spikes du neurone $r$ (processus ponctuel)
+  \item
+    \be
+    \lambda^{(r)}(t)&=&\nu^{(r)}(t)+\sum_{l=1}^M\,\int_{-\infty}^{t^-}h^{l,r}(t-u)\,dN_u^{l}\\
+    &=& \nu^{(r)}(t)+\sum_{l=1}^M\sum_{T\in\mathcal{N}^l,\,T<t}h^{l,r}(t-T),\ \forall t, \, \forall r
+    \ee
+  \item Pour $\lambda^{(r)}(t)$, on approche la partie spontanée et le noyau par des fonctions constantes par morceaux
+  \item On suppose que $\nu^{(r)}$ est une fonction constante.
+  \end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%\begin{frame}[fragile]
+%  \frametitle{Problem presentation}
+%  \begin{itemize}
+%  \item Multivariate problem, M neurons
+%\item no d
+%\item Each spike is influenced by other ones up to a scope $A$, this distance is divided into bins for each spike
+%\item Example for two neurons\\
+%\hspace*{-1cm}  \includegraphics[width=\textwidth]{spikes.eps}\\
+%%\hspace*{-1cm}  \includegraphics[width=\textwidth]{spikes2.png}
+%  \end{itemize}
+%\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile,shrink]
+  %  \frametitle{Problem presentation}
+  \frametitle{Présentation du  problème}
+  \hspace*{-.5cm}  \includegraphics[width=\textwidth]{spikes2.eps}
+  %\captionof{figure}{Example for M=3 neurons}
+  \captionof{figure}{Exemple pour M=3 neurones}
+  \begin{itemize}
+    %\item $]T_{min},T^{max}]$ is the time window
+  \item On considère M neurones sur la fenêtre de temps $]T_{min},T^{max}]$.
+      %\item Each spike is influenced by other ones up to a scope $A$, this distance is divided into bins for each spike
+    \item L'influence de chaque spike sur les autres n'excède pas une portée $A$, divisée en $K$ boîtes (ou $K$ bins).
+  \end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Données d'entrée - DataNeur}
+  Les données d'entrée sont les temps de spikes pour chaque neurone.
+  \begin{itemize}
+  \item Deux possibilités: \textit{DataNeur} ou \textit{DataSpike}
+  \item Un DataNeur est une matrice de dimension M-by-(1+max(Ns)), où $M$ est le nombre de neurones et Ns le nombre de spikes par neurones
+  \item Chaque ligne de la matrice contient les spikes d'un neurone correspondant à la ligne, triés dans l'ordre croissant
+  \item On complète par des "0" s'il n'y a pas de spike.
+  \item Exemple: 3 neurones, $Ns=[2, 1, 3]$, le DataNeur obtenu est la matrice 3-by-4 telle que:
+    \be
+    \left(
+    \begin{array}{ccccc}
+      2 &0.4 &0.6 &0\\
+      1 &0.62 &0 &0\\
+      3 &0.05 &0.21 &0.46
+    \end{array}
+    \right)
+    \ee
+  \end{itemize}
+\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Données d'entrée - DataSpike}
+  \begin{itemize}
+  \item Un DataSpike est un tableau de dimension 2-by-$Ntot$, où $Ntot$ est le nombre total de spikes, indépendamment des neurones.
+  \item La première ligne contient les spikes par ordre croissant, quel que soit le neurone
+  \item La deuxième ligne contient le numéro de neurone correspondant au spike de la 1ère ligne
+  \item Exemple: 3 neurones, $Ns=[2, 1, 3]$, le DataSpike obtenu est la matrice 2-by-6 telle que (la numérotation commence à 1)
+    \be
+    \left(
+    \begin{array}{cccccc}
+      0.05 & 0.21 &0.4 &0.46 &0.6 & 0.62\\
+      3 & 3 & 1 & 3 & 1 & 2
+    \end{array}
+    \right)
+    \ee
+  \end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%\begin{frame}[fragile]
+%  \frametitle{DataSpike | DataNeur}
+%Voici un exemple qu'on peut généraliser
+%  \begin{columns}[T]
+%\begin{column}{0.5\textwidth}
+%\be
+%DS=\left(
+%  \begin{array}{cccccc}
+%  t_1^3 & t_2^3 & t_1^1 & t_3^3 & t_2^1 & t_1^2\\
+%  3 & 3 & 1 & 3 & 1 & 2
+%  \end{array} \right)
+%\ee
+%\end{column}
+%\begin{column}{0.5\textwidth}
+%  \be
+%  DataNeur =\left(
+%  \begin{array}{cccccc}
+%2 &t_1^1 &t_2^1 &0\\
+%1 &t_1^2 &0 &0\\
+%3 &t_1^3 &t_2^3 &t_3^3
+%  \end{array}
+%\right)
+%  \ee
+%\end{column}
+%  \end{columns}
+%\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile,shrink]
+  \frametitle{Classe DataSpike }
+  \begin{itemize}
+  \item Attributs de la classe
+    \begin{itemize}
+    \item $\_T$: tableau des spikes (double *)
+      \item $\_neur$: tableau des numéros de neurones (unsigned int *)
+    \end{itemize}
+      \item Diagramme de la classe
+  \end{itemize}
+\begin{center}
+  \includegraphics[width=.5\textwidth]{DataSpike.eps}
+\captionof{figure}{Diagramme de la classe \textit{DataSpike} en C++}
+\end{center}
+\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \begin{itemize}
+\frametitle{Notations}
+\item $K$ est le nombre de boîtes (bins).
+\item On note
+\be
+\begin{array}{lll}
+  \Ik&=](k-1)\,\delta,{k}\,\delta], \  &\forall \ 1 \leq k \leq K\\
+      \varphi_k(t)&=\mathds{1}_{\Ik}(t) , \ &\forall \ 1 \leq k \leq K
+\end{array}
+\ee
+\item   On introduit l'opérateur $\psi^{(l)}$ qui transforme une fonction $v$ en une autre fonction, tel que, $\forall l$
+\be
+\psi^{(l)}_t(v) &=& \int_{-\infty}^{t^-}v(t-u)\,dN_u^{l} = \sum_{u\in\mathcal{N}^l,\,u<t}v(t-u), \ \forall v, \ \forall t, \, \forall l
+\ee
+D'où, pour $v=\varphi_k$
+\be
+\psi^l_t(\varphi_k)&=&\int_{u<t}\mathds{1}_{\Ik}(t-u)\,dN^l_u=\sum_{T<t,T\in \mathcal{N}^l}\mathds{1}_{\Ik}(t-T)
+\ee
+\end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Matrices du problème}
+  %  Figure illustrant les matrices du problème
+  \begin{itemize}
+  \item b et d sont de taille (M*K+1)-by-M
+  \item G est de taille (M*K+1)-by-(M*K+1)
+    %\item Le 1er indice correspond à la partie spontanée
+  \item On note par $spont$ ce qui correspond à la partie spontanée (1ère ligne et/ou 1ère colonne des matrices)
+    %\item La numérotation est comme suit: Pour un neurone donné, on traite toutes les boîtes (ou bins)
+%  \item Numérotation: pour le neurone $r$ donné, pour chaque neurone $1\leq l \leq M$ influen\c{c}ant $r$, à $l$ fixé, on considère toutes les boîtes d'indice $k$ ($1\leq k \leq K$).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Numérotation de b}
+  %\begin{itemize}
+  %  \begin{eqnarray*}
+  %\begin{array}{ll}
+  %b^r_{spont} &\leftrightarrow b[0,r] \ \ 0 \leq r \leq {M-1}\\
+  %b^r_{(l=1,k=1)} &\leftrightarrow b[1,r]\\
+  %b^r_{(l=1,k=2)} &\leftrightarrow b[2,r]\\
+  %&\cdots\\
+  %b^r_{(l=1,k=K)} &\leftrightarrow b[K,r]\\
+  %b^r_{(l=2,k=1)} &\leftrightarrow b[K+1,r]\\
+  %b^r_{(l=2,k=2)} &\leftrightarrow b[K+2,r]\\
+  %&\cdots\\
+  %b^r_{(l=2,k=K)} &\leftrightarrow b[2K,r]\\
+  %&\cdots\\
+  %b^r_{(l,k)} &\leftrightarrow b[(l-1)K+k,r]
+  %\end{array}
+  %\end{eqnarray*}
+\begin{itemize}
+%\item La numérotation est comme suit: Pour un neurone donné, on traite toutes les boîtes (ou bins)
+\item Numérotation: pour le neurone $r$ donné, pour chaque neurone $1\leq l \leq M$ influen\c{c}ant $r$, à $l$ fixé, on considère toutes les boîtes d'indice $k$ ($1\leq k \leq K$).
+\item  \begin{eqnarray*}
+    \begin{array}{ll}
+      b^r_{spont} &\leftrightarrow b[0,r] \ \ 0 \leq r \leq {M-1}\\
+      &\cdots\\
+      b^r_{(l,k)} &\leftrightarrow b[(l-1)K+k,r]\\
+      &\cdots
+    \end{array}
+  \end{eqnarray*}
+\end{itemize}    
+\begin{center}
+\includegraphics[width=.5\textwidth]{matrixb.eps}
+\end{center}
+%Le problème de Hawkes nous conduit au problème suivant
+\end{frame}
+
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Matrice $b$}
+  \begin{itemize}
+  \item Partie spontanée pour le neurone $r$
+    \be
+    b_{spont}^{(r)}= \int_{\Tmin}^{\Tmax}\,dN^{r}_t=\# \left\{T: {{\Tmin<T\leq\Tmax}},T\in \mathcal{N}^{(r)}\right\}
+    \ee
+\item Contribution du neurone $l$ sur le neurone $r$, pour la boîte (bin) $k$
+    \be
+    b_{(l,k)}^{(r)}=\int_{\Tmin}^{\Tmax} \psi^l_t(\varphi_k)\,dN^{r}_t
+    \ee
+\end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+\frametitle{Calcul de la matrice $b$ - 0}
+\begin{itemize}
+\item Dans ce qui suit, \textit{cnt}  est un vecteur de taillle $M$, contenant la partie spontanée de $b$
+\be
+cnt^r = b_{spont}^{(r)} = \int_{\Tmin}^{\Tmax}\,dN^{r}_t
+\ee
+\item  low désigne un tableau d'indices tel que low(i) est le plus petit indice  dans le tableau des spikes tel que
+\be
+j=low(i) \Rightarrow  |T_j-T_i|\leq A=K\,\delta, \ \ i, j \, \in \ldbrack 1, Ntot\rdbrack
+\ee
+\item  $get\_k(x,\delta)$ retourne l'entier k$\geq 1$ tel que $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$  
+\item Dans les algos qui suivent, la numérotation des matrices et vecteurs commencent à 1 (comme en R).
+\end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+\begin{frame}[fragile]
+  \frametitle{Calcul de la matrice $b$ - I}
+  \begin{algorithm}[H]
+    \caption{Computation of $b$}
+    \begin{algorithmic}[1] 
+      \State T $\gets$ DS[1,]  \Comment{first row of DS: all spike values}
+      \State neur $\gets$ DS[2,] \Comment{second row of DS: neuron numbers}
+      \State Ntot $\gets$ length(T) \Comment{total number of spikes}
+      \State A $\gets K*\delta$ \Comment{scope, K bins of size $\delta$}
+      \State b $\gets$ matrix(0, nrow=(1+M*K), ncol= M) \Comment{init of b}
+      \State low $\gets$ vector(mode='integer', length=Ntot) \Comment{init of low - for the State}
+      \State cnt $\gets$ vector(mode='integer', length=M) \Comment{init of cnt - for the algo}
+      \State ilow $\gets$ 1
+      \State eps $\gets$ 1.e-12 \Comment{for numerical precision}
+      \For{(i=1:Ntot)} \Comment{loop over spikes}
+      \State t $\gets$ T[i]; r $\gets$ neur[i]
+      \While{$(|T[ilow]-t|>A)$}
+      \State ilow $\gets$ ilow+1
+      \EndWhile
+      \algstore{algb1}
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+\begin{frame}[fragile,shrink]
+  \frametitle{Calcul de la matrice $b$ - II}
+  \begin{algorithm}[H]
+    \begin{algorithmic}[1] 
+      \algrestore{algb1}
+      \State low[i] $\gets$ ilow
+      \If{($\Tmin<t\leq\Tmax$)}
+      \State cnt[r] $\gets$ cnt[r]+1
+      \For{(j=ilow:(i-1))}
+      \If{($|t-T[j]|<eps$)}
+      \State break
+      %\State next \Comment{same instruction as continue, the spike should be $<t$}
+      \EndIf
+      \State k $\gets$ get\_k(t-T[j], delta)
+      \State l $\gets$ neur[j]
+      %\State b[(r-1)*(K+1)+k+1, r] += 1
+      \State b[(l-1)*K+k+1, r] $\mathrel{+}=$ 1
+      \EndFor
+      \EndIf
+      \EndFor
+      \State b[1,]  $\gets$ cnt \Comment{1st line of b}
+      \State \Return b, low, cnt
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+
+%\begin{frame}[fragile]
+%  \be
+%\int_{\Tmin}^{\Tmax} \psi_t(\varphi_k)\,dN^{r}_t
+%  \ee
+%\end{frame}
+%
+%\begin{frame}[fragile]
+%  \be
+%\int_{\Tmin}^{\Tmax} \psi^{r_1}_t(\varphi_{k_1})\,\psi^{r_2}_t(\varphi_{k_2})\,dt
+%  \ee
+%\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Matrice $G$}
+\begin{itemize}
+\item Partie spontanée
+\be
+G_{spont,spont}=\int_{\Tmin}^{\Tmax} \,dt = \Tmax - \Tmin
+\ee
+\item Première ligne ou colonne
+    \be
+    G_{spont,(l,k)}=\int_{\Tmin}^{\Tmax} \psi^{l}_t(\varphi_{k})\,dt
+    \ee
+
+\item Contribution du neurone $l_1$, pour la boîte (bin) $k_1$, du neurone $l_2$ pour la boîte (bin) $k_2$
+  \be
+  G_{(l_1,k_1),(l_2,k_2)}=\int_{\Tmin}^{\Tmax} \psi^{l_1}_t(\varphi_{k_1})\,\psi^{l_2}_t(\varphi_{k_2})dt
+  \ee
+  \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Calcul de la matrice $G$ - 0}
+\begin{itemize}
+\item {\scriptsize{\be
+&G_{spont,(l,k)}&%=\int_{\Tmin}^{\Tmax}\psi^{l}_t(\varphi_{k})\,dt
+  \simeq  \sum_{\substack{\theta\in\,\mathcal{N}^{(l)},\\(\Tmin-A)\leq \theta < \Tmax}}\left( \min{(\Tmax, k\,\delta+\theta)}- \max{(\Tmin, (k-1)\,\delta+\theta)}\right)\\
+&G_{(l_1,k_1),(l_2,k_2)}&\simeq\sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\theta\in\mathcal{N}^{(l_2)},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{(\mathbb{I}_{k_1}+\tau)\cap(\mathbb{I}_{k_2}+\theta)\cap]\Tmin,\Tmax]}(t)\,dt
+  \ee}}
+\item $get\_low\_index(x,T)$  renvoie le plus petit entier $i$ tel que
+\be
+T_i > x \ \ \hbox{et }0<i<T.size()
+\ee
+\end{itemize}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile,shrink]
+  \frametitle{Calcul de la matrice $G$ - I}
+  \begin{algorithm}[H]
+    \caption{Computation of $G$}
+    \begin{algorithmic}[1] 
+      %\Use compute\_G(M, K, Tmin, Tmax, T, neur, delta, A)
+      %  \Desc Computation of b - numbering of neurons and k starts at 1
+      %\Input $\delta$; delta 
+      %  \Input M; integer - number of neurons
+      %  \Input K; integer - number of bins
+      %\Input Tmin - minimum time
+      %\Input Tmax - maximum time
+      %\Input T - flattened array of spike values (every spikes in a single row)
+      %\Input neur - array of neuron numbers to identify them in T
+      %\Input delta - size
+      %\Input A - scope, maximum distance to be taken into account
+      %\Output b - array of size (1+M*K)*M%, as in the Lasso problem $\min 1/2 \, x^t\,A\,x+b^t $ with constraints on $d$
+      \State G $\gets$ matrix(0, nrow=(1+M*K), ncol= (1+M*K)) \Comment{init of G}
+      \State G[1,1] $\gets \Tmax - \Tmin$
+      \State A $\gets K*\delta$ \Comment{scope}
+      \State depart $\gets$ get\_low\_index($(\Tmin-A)$, T)
+      \State $\beta$ $\gets$ get\_low\_index($\Tmax$, T) - 1
+      \For{(i in depart:$\beta$)}
+      \State ti $\gets$ T[i]; $l_1$ $\gets$ neur[i]
+      \For{($k$ in (1:K))} \Comment{1st row and 1st column of G}
+      \State $x_1$ $\gets \min{(\Tmax, ti+k\,\delta)}$
+      \State $x_2$ $\gets \max{(\Tmin, ti+(k-1)\,\delta)}$
+      \State $dx = x_1 - x_2$
+      \If{$(dx>0)$}
+      \State G[1,($l_1$-1)*K+$k$+1] += dx
+      \State G[($l_1$-1)*K+$k$+1,1] += dx
+      \EndIf
+      \EndFor
+      \algstore{algoG1}
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+\begin{frame}[fragile,shrink]
+  \frametitle{Calcul de la matrice $G$ - II}
+  \begin{algorithm}[H]
+    \begin{algorithmic}[1] 
+      \algrestore{algoG1}
+      \For{(j in (low[i]:(i-1)))} \Comment{inner part of G, $l_1 \neq l_2$}
+      \State tj $\gets$ T[j]; $l_2$ $\gets$ neur[j]
+      \For{($k_1$ in (1:K))}
+      \For{($k_2$ in (1:K))}
+      \State $x_1$ $\gets \min{(\Tmax, ti+k_1\,\delta, tj+k_2\,\delta)}$
+      \State $x_2$ $\gets \max{(\Tmin, ti+(k_1-1)\,\delta), (tj+(k_2-1)\,\delta)}$
+      \State $dx = x_1 - x_2$
+      \If{$(dx>0)$}
+      \State G[($l_1$-1)*K+$k_1$+1,($l_2$-1)*K+$k_2$+1] += dx
+      \State G[($l_2$-1)*K+$k_2$+1,($l_1$-1)*K+$k_1$+1] += dx
+      \EndIf
+      \EndFor
+      \EndFor
+      \EndFor
+      \For{($k_1$ in 1:K)} \Comment{$l_1==l_2$}
+      \State $x_1$ $\gets \min{(\Tmax, ti+k_1\,\delta)}$
+      \State $x_2$ $\gets \max{(\Tmin, ti+(k_1-1)\,\delta)}$
+      \State $dx = x_1 - x_2$
+      \If{$(dx> 0)$} \Comment{diagonal part}
+      \State G[($l_1$-1)*K+$k_1$+1,($l_1$-1)*K+$k_1$+1] += dx
+      \EndIf
+      \algstore{algoG2}
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+\begin{frame}[fragile,shrink]
+  \frametitle{Calcul de la matrice $G$ - III}
+  \begin{algorithm}[H]
+    \begin{algorithmic}[1] 
+      \algrestore{algoG2}
+      \For{($k_2$ in ($k_1$+1):K)} \Comment{extradiagonal part}
+      \State $x_2$ $\gets \max{(\Tmin, ti+(k_2-1)\,\delta)}$
+      \State $dx = x_1 - x_2$
+      \If{$(dx>0)$}
+      \State G[($l_1$-1)*K+$k_1$+1,($l_1$-1)*K+$k_2$+1] += dx
+      \State G[($l_1$-1)*K+$k_2$+1,($l_1$-1)*K+$k_1$+1] += dx
+      \EndIf
+      \EndFor
+      \EndFor
+      \EndFor
+      \State \Return G
+    \end{algorithmic}
+  \end{algorithm}
+
+
+
+\end{frame}
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%\begin{frame}[fragile,shrink]
+%  \frametitle{Calcul de la matrice $G$ - variante}
+%  On ne calcule que les indices qui conviennent pour la partie ....
+%  On appelle $k_1$, $k_2$
+%\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile,shrink]
+  \frametitle{Mise en \oe uvre}
+  \begin{itemize}
+  \item Code \textit{neuro-stat} existant mais manque de documentation et première version des algos pour calculer $b$, $G$ et $d$
+  \item Utilisation de la bibliothèque C++ \textit{armadillo} dans la nouvelle version
+  \item Intégration dans R a priori simple avec le package \textit{RcppArmadillo}
+  \item Performances assez semblables entre C++ \textit{armadillo} seul et \textit{RcppArmadillo}
+\item Une variante du calcul de $G$ a été faite, où les indices $(k_1, k_2)$ ont été calculés (pour $G_{(l_1,k_1),(l_2,k_2)}$)
+  \item $d$ pas encore implémenté dans la nouvelle version (plus compliqué)
+
+  \end{itemize}
+\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  \frametitle{Temps calcul des matrices pour un exemple}
+  On considère l'intervalle de temps $(0,600]$ et $\displaystyle\sum_{i=1}^M\nu_i = 15000$. On a les résultats suivants:\\[8pt]
+    %%\begin{table}[H]
+    %\vspace*{-0.3cm}
+    %% \begin{tabular}{|c|c|c|P{1.8cm}|P{2cm}|P{2cm}|P{2cm}|}
+    \resizebox{\textwidth}{!}{
+      \begin{tabular}{|c|c|c|p{1.8cm}|p{2cm}|p{2cm}|p{2cm}|}
+        \hline
+        M & $\nu$ & $\dsp\sum_{i=1}^M\nu_i$ & spike number per neuron on $(0,600]$& Elapsed time for $G$ (our method)& Elapsed time for $b$ (our method)& neuro-stat time \\
+    \hline
+    100  & 150 & 15000 & 90000 &1243.33 &125.935 &1188.961\\
+    \hline
+    200  & 75 & 15000 & 45000 &1247.23&128.933&2302.629\\
+    \hline
+    500  & 30 & 15000 & 18000 &1998.98&129.578&5521.465\\
+    \hline
+    1000  & 15 & 15000 & 9000 & 3049.78&190.101&10468.655\\
+    \hline
+    \end{tabular} }\\[8pt]
+        %\end{table}
+        \captionof{table}{Temps calcul pour $\sum_{i=1}^M\nu_i=15000$}
+\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%\begin{frame}[fragile,shrink]
+\begin{frame}[fragile]
+  \frametitle{Temps calcul des matrices}
+  \begin{minipage}{\textwidth}
+    \begin{minipage}{.5\textwidth}
+      %\hspace*{-.5cm}\includegraphics[width=\textwidth]{plot_times_15000.png}
+      \includegraphics[width=\textwidth]{plot_times_15000.png}
+      \captionof{figure}{Comparaison des temps calcul pour $G$ (loglog)}
+    \end{minipage}
+    \begin{minipage}{.5\textwidth}
+      \includegraphics[width=\textwidth]{plot_times_b_15000.png}
+      \captionof{figure}{Comparaison des temps calcul pour $b$ (loglog)}
+    \end{minipage}
+  \end{minipage}
+\end{frame}
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile,shrink]
+  \frametitle{Calcul de $d$: matrice $\mu_2$ et vecteur $\mu_A$}
+  \begin{itemize}
+  \item $d$ et $\mu_2$ sont des matrices de taille (1+MK)-by-M (comme $b$)
+  \item $\mu_A$ est un vecteur de taille (1+MK)
+  \item On pose $\gamma=3$ et $c_{log}=\log((1+MK)M)$
+  \item
+    \be
+  d_{r} = \sqrt{2 \gamma\,c_{log} \:{\mu_2}_{r}} + \dsp\frac{\gamma}{3}c_{log} \,\mu_A, \ \forall r \in \ldbrack 1,1+MK\rdbrack%, \ \forall i \in \{1,M\}
+  \ee
+  \item  Partie spontanée pour le neurone $r$ dans $\mu_2$
+    \be
+    (\mu_2)_{spont}^{(r)}=\int_{\Tmin}^{\Tmax} \,dN^{r}_t
+    \ee
+    Contribution du neurone $l$ sur $r$, pour la boîte (bin) $k$
+    \be
+    (\mu_2)_{(l,k)}^{(r)}&=&\int_{\Tmin}^{\Tmax} \left(\psi^l_t(\varphi_k)\right)^2\,dN^{r}_t\\
+%    \ee
+%  \item %$\mu_A$
+%    \be
+    (\mu_A)_{spont}&=&1, \ \ (\mu_A)_{(l,k)}=\sup_{t\in]\Tmin,\Tmax]}|\psi^l_t(\varphi_k)|
+        \ee
+  \end{itemize}
+\end{frame}
+
+%\begin{frame}[fragile]
+%  \frametitle{Matrices du problème (suite)}
+%  \begin{itemize}
+%
+%  \item d
+%    \be
+%    d_{ri} = \sqrt{2 \gamma\log((1+MK)M) {\mu_2}_{ri}} +\\+ \dsp\frac{\gamma}{3}\log((1+MK)M) {\mu_A}_r \forall r \in \{1,1+MK\}, \ \ \ \forall i \in \{1,M\}
+%    \ee
+%  \end{itemize}
+%\end{frame}
+
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\begin{frame}[fragile]
+  %  \frametitle{Lasso solvers}
+  \frametitle{Solveurs Lasso}
+  \begin{itemize}
+  \item lassoshooting (R)
+    %  \item celer
+  \item LARS dans scikit-learn, mlpack
+  \item Spams
+  \item code inclus dans \textit{neuro-stat}
+  \end{itemize}
+  Pour chaque neurone, il faut un résoudre un problème du Lasso, à savoir trouver $a_r\in\R^{\dim}$, où $b_r$ et $d_r$ représentent la r-ième colonne de $b$ et $d$, respectivement,
+  \be
+  &\dim = M\,K + 1\\
+  &\hbox{trouver }\argmin_{a_r\in \R^{\dim}} \ \dsp\frac{1}{2} a_r^TGa_r-b_r^Ta_r+d_r^T|a_r|
+  \ee
+  $a_r$ est la r-ième colonne de la matrice $a$ de dimension $\dim$-by-M.
+\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+
+\begin{frame}[fragile,shrink]
+  \frametitle{lasso\_shooting algorithm}
+  \begin{algorithm}[H]
+    \caption{lasso\_shooting}
+    \begin{algorithmic}[1] 
+      \Use lasso\_shooting(G, b, d, $a_0$, nitmax=10000, eps=1e-8)
+      %\Desc 
+      %\Input G - Dim-by-Dim matrix, where Dim=MK+1, M is the neuron number and K is the number of bins
+      %\Input b - Dim-by-M matrix,
+      %\Input d - Dim-by-M matrix
+      %\Input lambda - scalar, $\geq 0$, for the optimisation problem
+      %\Output a - Dim-by-M matrix, solution of the optimisation problem
+      \State M $\gets$ ncol(b)
+      \State Dim $\gets$ nrow(b)
+      \State a $\gets$ matrix(nrow=Dim, ncol=M) \Comment{array containing Lasso solutions}
+      \State nit $\gets$ vector(length=M, mode='numeric') \Comment{array containing iteration number}
+      \For{(r in 1:M)}
+      \State a[,r] $\gets$ lasso\_shooting1(G, b[,r], d[,r], $a_0$, nitmax, eps) \Comment{a[,r] is of dimension Dim}
+      \EndFor
+      \State \Return a, nit
+    \end{algorithmic}
+  \end{algorithm}
+\end{frame}
+
+\begin{frame}[fragile,shrink]
+  \frametitle{lasso\_shooting algorithm}
+  lasso\_shooting1 permet de résoudre un seul problème du Lasso dans $\R^{\dim}$.
+  %  \scalebox{0.7}{
+  %\begin{minipage}{\textwidth}
+  \begin{algorithm}[H]
+  \caption{lasso\_shooting1}
+\begin{algorithmic}[1] 
+    \Use lasso\_shooting1(G, b, d, $a_0$, nitmax=10000, eps=1e-8)
+    %\Desc 
+    %\Input G - Dim-by-Dim matrix, where dim=MK+1, M is the neuron number and K is the number of bins
+    %\Input b - vector of dimension Dim
+    %\Input d - vector of dimension Dim
+    %\Input $a_0$ - vector of dimension Dim, for initialisation
+    %\Input nitmax - maximum number of iterations
+    %\Input eps - for numerical precision
+    %\Output $a$ - vector of dimension Dim, solution of the optimisation problem
+    %\Output nit - integer, number of iterations to obtain a solution
+    \State Dim $\gets$ length(b); a $\gets a_0$; aold $\gets$ a  \Comment{to define aold}
+    \State J $\gets$ (function(a) 1/2*t(a)*G*a - t(b)*a + d*abs(a))
+    \While{(($(|J(a)-J(aold)|>eps)$ \& $(nit\leq nitmax)$ ) $|$(nit==0))  }
+    \State aold $\gets$ a
+    \For{(i in 1:Dim)}
+    \State S $\gets$ G[i,] * a - G[i,i]*a[i] - b[i]
+    \If{(G[i,i]$\leq 0$)}
+    \State warning ('unexpected value for G(i,i)!')
+    \EndIf
+    \If{($(-S-d[i])>0$)}
+    \State a[i] $\gets \dsp\frac{-S-d[i]}{G[i,i]}$  
+    \EndIf
+    \If{($(-S+d[i])<0$)}
+    \State a[i] $\gets \dsp\frac{-S+d[i]}{G[i,i]}$  
+    \Else
+    \State a[i] $\gets$ 0
+    \EndIf
+    \EndFor
+    \State nit $\gets$ nit+1
+    \EndWhile
+    \State \Return a, nit
+\end{algorithmic}
+  \end{algorithm}
+  %  \end{minipage}}
+\end{frame}
+%%--------------------------------------------------------------
+%%--------------------------------------------------------------
+%%--------------------------------------------------------------
+%\begin{frame}[fragile]
+%  \frametitle{d}
+%  \begin{itemize}
+%  \item $\mu_2$ est une matrice de taille (1+MK)-by-M
+%  \item $\mu_A$ est un vecteur de taille (1+MK)
+%  \item d est un vecteur de taille (1+MK)-by-M
+%  \item On choisit $\gamma=3$
+%  \end{itemize}
+%
+%  \be
+%  d_{ri} = \sqrt{2 \gamma\log((1+MK)M) {\mu_2}_{ri}} + \dsp\frac{\gamma}{3}\log((1+MK)M) {\mu_A}_r \forall r \in \{1,1+MK\}, \forall i \in \{1,M\}
+%  \ee
+%\end{frame}
+
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+
+%\begin{frame}[fragile]
+%  \frametitle{Notation}
+%  We consider the time interval ($0,\Tmax$) with time step $\delta$.\\
+%  $T_i$ is the i-th spike of the neuron.\\
+%  For simplicity, we assume to have no spike outside ($0,\Tmax$).
+%  \be
+%  K&=&\lfloor \dsp \Tmax/\delta \rfloor=\hbox{ number of parts of }(0,\Tmax)\\
+%  \Ik&=&(k\,\delta,(k+1)\,\delta], \ \ \ \forall \ -1 \leq k \leq K-1\\
+%    \varphi_k(t)&=&N_{[t-k\delta,t-(k-1)\delta)}=N_{t-\Ikm},  \ \ \ \forall \ 0 \leq k \leq K\\
+%      %\varphi_k(t)
+%      &=&\hbox{number of spikes of the point process in the interval }(t-\Ikm)\\
+%      \psi_t&=& \hbox{predictable function}
+%      \ee
+%\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%\begin{frame}[fragile]
+%  \frametitle{Matrices for 1 neuron (Hawkes)}
+%\begin{itemize}
+%\item $A$: N-by-N matrix
+%\item $G$: (1+K)-by-(1+K) matrix
+%\item $b$: (1+K)-by-1 vector
+%\item $d$: (1+K)-by-1 vector
+%\end{itemize}
+%The unknowns in our problem are $(\mu, (a_k)_k)$, $0\leq k \leq K-1$.
+%\begin{eqnarray*}
+%\begin{array}{ll}
+%b_{00} &\leftrightarrow b[1] \\
+%b_{0} &\leftrightarrow b[2]\\
+%&\cdots\\
+%b_{k} &\leftrightarrow b[k+2]\\
+%&\cdots\\
+%b_{K-1} &\leftrightarrow b[K+1]
+%\end{array}
+%\end{eqnarray*}
+%The Lasso problem to solve is
+%\be
+%\min_{x\in \R^{K+1}} \ \dsp\frac{1}{2} x^TGx-b^Tx+\|d*x\|_1
+%\ee
+%\end{frame}
+
+
+
+
+%\begin{frame}[fragile]
+%\frametitle{Computation of $b$}
+%%We have, for $0\leq  K-1$
+%\begin{eqnarray*}
+%\label{eq:defb}
+%\begin{array}{l}
+%b_{00}=\dsp\int_0^{Tmax} \,dN_t\\[8pt]
+%b_{k}=\dsp\int_0^{Tmax} \psi_t(\varphi_k) \,dN_t=\dsp\int_0^{Tmax} N_{[t-k\delta,t-(k-1)\delta)} \,dN_t,\ \forall k \in \ldbrack 0,K-1\rdbrack\\[8pt]
+%b_{k}=\dsp\int_0^{Tmax} N_{t-\Ikm} \,dN_t=\dsp\int\sum_{T<\Tmax} N_{[T-k\delta,T-(k-1)\delta)}= \dsp\sum_{T<\Tmax} N_{T-\Ikm}
+%\end{array}
+%\end{eqnarray*}
+%
+%\end{frame}
+%
+%
+%
+%\begin{frame}[fragile]
+%\frametitle{Computation of $d$}
+%We have $\gamma=3$. %What happens if $\Tmax=1$ ?
+%
+%
+%\be
+%d_{00}&=&\sqrt{2\gamma\log(\Tmax)\,N}+\dsp\frac{\gamma\,\log(\Tmax)}{3}\\
+%d_k&=&\sqrt{2\gamma\log(\Tmax)\,\int_0^{\Tmax}\psi_t^2(\varphi_k)\,dN_t}\\
+%&&\ +\dsp\frac{\gamma\,\log(\Tmax)}{3}\sup_{t\in[0,\Tmax]}|\psi_t(\varphi_k)| ,\ \ \forall k\in \ldbrack 0,K-1\rdbrack
+%\ee
+%
+%%Deterministic way
+%%\be
+%%d_k=\sqrt{2\gamma\log(\Tmax)\,\int_0^{\Tmax}\varphi_k^2(t)\,dN_t}+\dsp\frac{\gamma\,\log(\Tmax)}{3}\sup_{t\in[0,\Tmax]}|\varphi_k(t))|
+%%\ee
+%
+%\end{frame}
+
+
+\begin{frame}
+  \frametitle{Perspectives}
+  \begin{itemize}
+  \item Mise en \oe uvre du calcul de $d$
+  \item Algo de Lasso shooting à améliorer (si G non sdp)
+  \item Initialisation du lasso shooting
+  \item Implémenter active set method
+  \item Exemples de validation complets
+  \end{itemize}
+\end{frame}
+%\begin{frame}[fragile,shrink]
+%\frametitle{Computation of $d$}
+%\begin{algorithm}[H]
+%\caption{Partial computation of $d$}
+%\begin{algorithmic}[1] 
+%%Algorithm
+%%Step 1: Find the first index j such that T¡ > 0, calls jstart.
+%%Step 2: From each index j from jstart, we 'look' back II¿ by define Tlow, and Tup.
+%%Step 3: If we flnd the index ¿ such lhat T¿ belongs to the interval (Tlow,Tup], increase
+%%count, and record it in the matrix ,4. \Me stop immediately when T¿ < Tlota.
+%
+%\item[\textbf{Usage:}] compute\_d(spike, del, Tmax, A, k, gamma)
+%  \item[\textbf{Description:}] Partial computation of $A$ and computation of $b$ for the k-th partition
+%  \item[\textbf{Input:}] spike; array of spike times
+%\item[\textbf{Input:}] del; $\delta$, delay
+%\item[\textbf{Input:}] $\Tmax$; maximum time of the experience
+%\item[\textbf{Input:}] A; $N$-by-$N$ matrix already initialized%%\Comment{$N$ is the number of spikes}
+%\item[\textbf{Input:}] k; partition index ($k \in \ldbrack 0,K-1 \rdbrack$)
+%\item[\textbf{Input:}] $\gamma$; constant used in the definition of $d$
+%\item[\textbf{Output:}] Returns $d$
+%%%\algrule
+%% \\\hrulefill
+%\State iind $\gets$ which(A==k, arr.ind=TRUE) %%\Comment{iind is a matrix}
+%\State z $\gets$ vector(length=length(spike), mode='numeric') %%\Comment{for maximum value}
+%\For{i=1:N} %%\Comment{$N\geq 1$!}
+%\State  $T_1 \gets spike[i] + k*del$; $T_2 = spike[i] + (k+1)*del$
+%\If{($T_2 \leq \Tmax$) \& ($T_2 \geq 0$)}
+%\State z[i] $\gets$  countspike(spike, del, k, $T_2$)
+%\EndIf
+%\If{($T_1 < \Tmax$) \& ($T_1 \geq 0$)}
+%\State z[i] $\gets$  $\max$(z[i], 1)
+%\EndIf
+%\If{($T_1 < 0$) \& ($T_2> \Tmax$)}
+%\State z[i] $\gets$  $\max$(z[i], 1)
+%\EndIf
+%\EndFor
+%\State $d$ $\gets$ $\sqrt{2\gamma\log(\Tmax)\,count\_conse(iind[,2])}+\gamma \log(\Tmax)/3* \max(z) $
+%\State return $d$
+%\end{algorithmic}
+%\end{algorithm}
+%
+%\end{frame}
+%
+%\begin{frame}[fragile,shrink]
+%\frametitle{Computation of $d$}
+%\begin{algorithm}[H]
+%\caption{count\_conse}
+%\begin{algorithmic}[1] 
+%\item[\textbf{Usage:}] count\_conse(x)
+%  \item[\textbf{Description:}] Computation of consecutive ?
+%  \item[\textbf{Input:}] x; array of ?
+%\item[\textbf{Output:}] res; 
+%%%\algrule
+%
+%\State count $\gets$ 0
+%\State conse $\gets$ 1
+%\State i $\gets$ 1
+%\State n $\gets$ length(x)
+%\If{(!n)}
+%\State return 0
+%\EndIf
+%\State compare $\gets$ x[1]
+%\State x[n+1] $\gets$ -1 %%\Comment{length of x is increased}
+%\While{($i\leq n$)}
+%\If{(x[i+1]==compare)}
+%\State conse $\gets$ conse + 1
+%\Else
+%\State count $\gets$ count + conse*(conse-1)
+%\State conse $\gets$ 1
+%\State compare $\gets$ x[i+1]
+%\EndIf
+%\State i $\gets$ i+1
+%\EndWhile
+%\State res $\gets$ n+ count
+%\State return res
+%\end{algorithmic}
+%\end{algorithm}
+%\end{frame}
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+%--------------------------------------------------------------
+\end{document}

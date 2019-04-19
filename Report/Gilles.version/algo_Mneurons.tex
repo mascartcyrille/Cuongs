@@ -98,25 +98,26 @@ We define the following variables
 \item $depart$ is the first index of $T$ such that $T[depart]> \Tmin-A$
 \item $departbis$ is the last index of $T$ such that $T[departbis]\leq \Tmax-A$
 \end{itemize}
-\textit{get\_low\_index} and \textit{get\_up\_index} are functions which define $\alpha$, $\beta$, ...
+$\alpha$ and $\beta$ are defined using \textit{get\_low\_index} function.
 \begin{itemize}
 \item \textit{get\_low\_index} function works as follows:
 \be
 \hbox{get\_low\_index}(x, T) = \gamma \hbox{ where } \gamma \hbox{ is the first index of T such that }T[\gamma]> x 
 \ee
-\item \textit{get\_up\_index} function works as follows:
-\be
-\hbox{get\_up\_index}(x, T) = \gamma \hbox{ where } \gamma \hbox{ is the last index of T such that }T[\gamma]\leq x 
-\ee
+%\item \textit{get\_up\_index} function works as follows:
+%\be
+%\hbox{get\_up\_index}(x, T) = \gamma \hbox{ where } \gamma \hbox{ is the last index of T such that }T[\gamma]\leq x 
+%\ee
 \end{itemize}
 
 \begin{algorithm}[!h]
 \caption{$get\_low\_index$ function}
 \begin{algorithmic}[1] 
 \Use get\_low\_index(x, T)
-  \Desc Computation of ind, the first index in $T$ such that $T[ind]> x$ (to be improved!)
+\Desc Computation of ind, the first index in $T$ such that $T[ind]> x$. T is supposed to be sorted in ascending order. Possible values of ind are between 1 and (T.size()+1) (included). If get\_low\_index==1, it means  that all values of T satisfy $T>x$. If get\_low\_index==(T.size()+1), it means  that all values of T satisfy $T\leq x$. (To be improved!)
   \Input x; scalar value
-\Output ind - integer. If there is no index satisfying the condition, the size of T + 1 is returned.
+\Input T; array of spike times
+  \Output ind - integer. If there is no index satisfying the condition, the size of T + 1 is returned.
 \State ind $\gets$ 1
 \State n $\gets$ length(T)
 \While{(ind$<$(n+1))}
@@ -130,26 +131,27 @@ We define the following variables
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[!h]
-\caption{$get\_up\_index$ function}
-\begin{algorithmic}[1] 
-\Use get\_up\_index(x, T)
-  \Desc Computation of ind, the last index in $T$ such that $T[ind]\leq x$
-  \Input x; scalar value
-\Output ind - integer. If there is no index satisfying the condition, 0 is returned.
-\State ind $\gets$ length(T)
-\While{(ind$\geq$1)}
-\If{(T[ind]$>$x)}
-\State ind $\gets$ ind-1
-\Else
-\State break
-\EndIf
-\EndWhile
-\State \Return ind
-\end{algorithmic}
-\end{algorithm}
+%\begin{algorithm}[!h]
+%\caption{$get\_up\_index$ function}
+%\begin{algorithmic}[1] 
+%\Use get\_up\_index(x, T)
+%  \Desc Computation of ind, the last index in $T$ such that $T[ind]\leq x$
+%  \Input x; scalar value
+%\Output ind - integer. If there is no index satisfying the condition, 0 is returned.
+%\State ind $\gets$ length(T)
+%\While{(ind$\geq$1)}
+%\If{(T[ind]$>$x)}
+%\State ind $\gets$ ind-1
+%\Else
+%\State break
+%\EndIf
+%\EndWhile
+%\State \Return ind
+%\end{algorithmic}
+%\end{algorithm}
 
-\textit{get\_k} function works as follows:
+\begin{itemize}
+\item \textit{get\_k} function works as follows:
 \be
 get\_k(x, \delta) = \left\{
 \begin{array}{lll}
@@ -161,6 +163,7 @@ k &= \hbox{Int}(\dsp\frac{x}{\delta}) = \lfloor\dsp\frac{x}{\delta} \rfloor &\hb
 or $get\_k(x,\delta) = k\, \geq 1$ such that $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$
 
 For example $get\_k(1.5\,\delta, \delta)= 2$ and $get\_k(\delta, \delta)= 1$.
+\end{itemize}
 
 \begin{algorithm}[!h]
 \caption{$get\_k$ function}
@@ -252,7 +255,7 @@ For $b$ we use also the notation
 \State break
 %\State next \Comment{same instruction as continue, the spike should be $<t$}
 \EndIf
-\State k $\gets$ get\_k((t-T[j])/delta)+1 \Comment{more complex than integer part}
+\State k $\gets$ get\_k(t-T[j], delta) %\Comment{more complex than integer part}
 \State l $\gets$ neur[j]
 %\State b[(r-1)*(K+1)+k+1, r] += 1
 \State b[(l-1)*K+k+1, r] $\mathrel{+}=$ 1
@@ -304,7 +307,7 @@ G_{(l_1,k_1),(l_2,k_2)}&=&\int_{\Tmin}^{\Tmax}\left(\sum_{\substack{\tau\in\math
 \State G[1,1] $\gets \Tmax - \Tmin$
 \State A $\gets K*\delta$ \Comment{scope}
 \State depart $\gets$ get\_low\_index($(\Tmin-A)$, T)
-\State $\beta$ $\gets$ get\_up\_index($\Tmax$, T)
+\State $\beta$ $\gets$ get\_low\_index($\Tmax$, T) - 1
 \For{(i in depart:$\beta$)}
 \State ti $\gets$ T[i]; $l_1$ $\gets$ neur[i]
 \For{($k$ in (1:K))} \Comment{1st row and 1st column of G}

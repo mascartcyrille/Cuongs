@@ -16,6 +16,8 @@ unsigned int get_low_index(double x, const vec& T)
   // Possible values of ind are between 0 and T.size() (included)
   // if get_low_index==0, it means  that all values of T satisfy T>x
   // if get_low_index==T.size(), it means  that all values of T satisfy T<=x
+  // x; scalar value
+  //  ind ; integer. If there is no index satisfying the condition, the size of T is returned.
   int ind = 0;
   int n = T.size();
   while(ind < n) {
