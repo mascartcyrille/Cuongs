@@ -66,17 +66,20 @@
 \begin{frame}[fragile]
   \frametitle{Contexte/ Objectifs}
   \begin{itemize}
-  \item  D\'etection de d\'ependance entre neurones
-  \item On recherche, pour chaque neurone $r$, son intensit\'e fonctionnelle $\lambda^{(r)}(t)$: c'est la probabilit\'e d'un spike au temps $t$ pour le neurone.
+  \item  D\'etection de d\'ependance entre $M$ neurones
+  \item On recherche, pour chaque neurone $r$, son intensit\'e fonctionnelle $\lambda^{r}(t)$: c'est la probabilit\'e d'un spike au temps $t$ pour le neurone.
   \item Les intensités fonctionnelles sont modélisées par un processus de Hawkes
-  \item $\mathcal{N}^r$ est l'ensemble des spikes du neurone $r$ (processus ponctuel)
+%  \item $\mathcal{N}^r$ est l'ensemble des spikes du neurone $r$ (processus ponctuel)
+  \item $N^r$ est l'ensemble des spikes du neurone $r$ (train de spikes)
   \item
     \be
-    \lambda^{(r)}(t)&=&\nu^{(r)}(t)+\sum_{l=1}^M\,\int_{-\infty}^{t^-}h^{l,r}(t-u)\,dN_u^{l}\\
-    &=& \nu^{(r)}(t)+\sum_{l=1}^M\sum_{T\in\mathcal{N}^l,\,T<t}h^{l,r}(t-T),\ \forall t, \, \forall r
+%    \lambda^{r}(t)&=&\nu^{r}(t)+\sum_{l=1}^M\,\int_{-\infty}^{t^-}h^{l,r}(t-u)\,dN_u^{l}\\
+%    &=& \nu^{r}(t)+\sum_{l=1}^M\sum_{T\in\mathcal{N}^l,\,T<t}h^{l,r}(t-T),\ \forall t, \, \forall r
+    \lambda^{r}(t)&=&\nu^{r}(t)+\sum_{l=1}^M\,\int_{-\infty}^{t^-}h_{l\rightarrow r}(t-u)\,dN_u^{l}\\
+    &=& \nu^{r}(t)+\sum_{l=1}^M\sum_{T\in N^l,\,T<t}h_{l\rightarrow r}(t-T),\ \forall t, \, \forall r
     \ee
-  \item Pour $\lambda^{(r)}(t)$, on approche la partie spontanée et le noyau par des fonctions constantes par morceaux
-  \item On suppose que $\nu^{(r)}$ est une fonction constante.
+  \item Pour $\lambda^{r}(t)$, on approche la partie spontanée $\nu^{r}$ et le noyau $h_{l\rightarrow r}$ par des fonctions constantes par morceaux
+  \item On suppose que $\nu^{r}$ est une fonction constante.
   \end{itemize}
 \end{frame}
 %--------------------------------------------------------------
@@ -105,7 +108,7 @@
   \captionof{figure}{Exemple pour M=3 neurones}
   \begin{itemize}
     %\item $]T_{min},T^{max}]$ is the time window
-  \item On considère M neurones sur la fenêtre de temps $]T_{min},T^{max}]$.
+  \item On considère M neurones sur la fenêtre de temps $(T_{min},T^{max}]$. %$]T_{min},T^{max}]$.
       %\item Each spike is influenced by other ones up to a scope $A$, this distance is divided into bins for each spike
     \item L'influence de chaque spike sur les autres n'excède pas une portée $A$, divisée en $K$ boîtes (ou $K$ bins).
   \end{itemize}
@@ -213,17 +216,20 @@
 \item On note
 \be
 \begin{array}{lll}
-  \Ik&=](k-1)\,\delta,{k}\,\delta], \  &\forall \ 1 \leq k \leq K\\
-      \varphi_k(t)&=\mathds{1}_{\Ik}(t) , \ &\forall \ 1 \leq k \leq K
+%  \Ik&=](k-1)\,\delta,{k}\,\delta], \  &\forall \ 1 \leq k \leq K\\
+  \Ik&=((k-1)\,\delta,{k}\,\delta], \  &\forall \ 1 \leq k \leq K\\
+  \varphi_k(t)&=\mathds{1}_{\Ik}(t) , \ &\forall \ 1 \leq k \leq K
 \end{array}
 \ee
-\item   On introduit l'opérateur $\psi^{(l)}$ qui transforme une fonction $v$ en une autre fonction, tel que, $\forall l$
+\item   On introduit l'opérateur $\psi^{l}$ qui transforme une fonction $v$ en une autre fonction, tel que, $\forall l$
 \be
-\psi^{(l)}_t(v) &=& \int_{-\infty}^{t^-}v(t-u)\,dN_u^{l} = \sum_{u\in\mathcal{N}^l,\,u<t}v(t-u), \ \forall v, \ \forall t, \, \forall l
+%\psi^{l}_t(v) &=& \int_{-\infty}^{t^-}v(t-u)\,dN_u^{l} = \sum_{u\in\mathcal{N}^l,\,u<t}v(t-u), \ \forall v, \ \forall t, \, \forall l
+\psi^{l}_t(v) &=& \int_{-\infty}^{t^-}v(t-u)\,dN_u^{l} = \sum_{T\in N^l,\,T<t}v(t-T), \ \forall v, \ \forall t, \, \forall l
 \ee
 D'où, pour $v=\varphi_k$
 \be
-\psi^l_t(\varphi_k)&=&\int_{u<t}\mathds{1}_{\Ik}(t-u)\,dN^l_u=\sum_{T<t,T\in \mathcal{N}^l}\mathds{1}_{\Ik}(t-T)
+%\psi^l_t(\varphi_k)&=&\int_{u<t}\mathds{1}_{\Ik}(t-u)\,dN^l_u=\sum_{T<t,T\in \mathcal{N}^l}\mathds{1}_{\Ik}(t-T)
+\psi^l_t(\varphi_k)&=&\int_{u<t}\mathds{1}_{\Ik}(t-u)\,dN^l_u=\sum_{T<t,T\in N^l}\mathds{1}_{\Ik}(t-T)
 \ee
 \end{itemize}
 \end{frame}
@@ -289,11 +295,12 @@ D'où, pour $v=\varphi_k$
   \begin{itemize}
   \item Partie spontanée pour le neurone $r$
     \be
-    b_{spont}^{(r)}= \int_{\Tmin}^{\Tmax}\,dN^{r}_t=\# \left\{T: {{\Tmin<T\leq\Tmax}},T\in \mathcal{N}^{(r)}\right\}
+%    b_{spont}^{r}= \int_{\Tmin}^{\Tmax}\,dN^{r}_t=\# \left\{T: {{\Tmin<T\leq\Tmax}},T\in \mathcal{N}^{r}\right\}
+    b_{spont}^{r}= \int_{\Tmin}^{\Tmax}\,dN^{r}_t=\# \left\{T: {{\Tmin<T\leq\Tmax}},T\in N^{r}\right\}
     \ee
 \item Contribution du neurone $l$ sur le neurone $r$, pour la boîte (bin) $k$
     \be
-    b_{(l,k)}^{(r)}=\int_{\Tmin}^{\Tmax} \psi^l_t(\varphi_k)\,dN^{r}_t
+    b_{(l,k)}^{r}=\int_{\Tmin}^{\Tmax} \psi^l_t(\varphi_k)\,dN^{r}_t
     \ee
 \end{itemize}
 \end{frame}
@@ -305,13 +312,14 @@ D'où, pour $v=\varphi_k$
 \begin{itemize}
 \item Dans ce qui suit, \textit{cnt}  est un vecteur de taillle $M$, contenant la partie spontanée de $b$
 \be
-cnt^r = b_{spont}^{(r)} = \int_{\Tmin}^{\Tmax}\,dN^{r}_t
+cnt^r = b_{spont}^{r} = \int_{\Tmin}^{\Tmax}\,dN^{r}_t
 \ee
 \item  low désigne un tableau d'indices tel que low(i) est le plus petit indice  dans le tableau des spikes tel que
 \be
 j=low(i) \Rightarrow  |T_j-T_i|\leq A=K\,\delta, \ \ i, j \, \in \ldbrack 1, Ntot\rdbrack
 \ee
-\item  $get\_k(x,\delta)$ retourne l'entier k$\geq 1$ tel que $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$  
+%\item  $get\_k(x,\delta)$ retourne l'entier k$\geq 1$ tel que $x \in \Ik=]{(k-1)}\,\delta,\:k\,\delta]$  
+\item  $get\_k(x,\delta)$ retourne l'entier k$\geq 1$ tel que $x \in \Ik=({(k-1)}\,\delta,\:k\,\delta]$  
 \item Dans les algos qui suivent, la numérotation des matrices et vecteurs commencent à 1 (comme en R).
 \end{itemize}
 \end{frame}
@@ -406,12 +414,14 @@ G_{spont,spont}=\int_{\Tmin}^{\Tmax} \,dt = \Tmax - \Tmin
 \begin{itemize}
 \item {\scriptsize{\be
 &G_{spont,(l,k)}&%=\int_{\Tmin}^{\Tmax}\psi^{l}_t(\varphi_{k})\,dt
-  \simeq  \sum_{\substack{\theta\in\,\mathcal{N}^{(l)},\\(\Tmin-A)\leq \theta < \Tmax}}\left( \min{(\Tmax, k\,\delta+\theta)}- \max{(\Tmin, (k-1)\,\delta+\theta)}\right)\\
-&G_{(l_1,k_1),(l_2,k_2)}&\simeq\sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\theta\in\mathcal{N}^{(l_2)},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{(\mathbb{I}_{k_1}+\tau)\cap(\mathbb{I}_{k_2}+\theta)\cap]\Tmin,\Tmax]}(t)\,dt
+%  \simeq  \sum_{\substack{\theta\in\,\mathcal{N}^{l},\\(\Tmin-A)\leq \theta < \Tmax}}\left( \min{(\Tmax, k\,\delta+\theta)}- \max{(\Tmin, (k-1)\,\delta+\theta)}\right)\\
+  \simeq  \sum_{\substack{\theta\in\,N^{l},\\(\Tmin-A)\leq \theta < \Tmax}}\left( \min{(\Tmax, k\,\delta+\theta)}- \max{(\Tmin, (k-1)\,\delta+\theta)}\right)\\
+%    &G_{(l_1,k_1),(l_2,k_2)}&\simeq\sum_{\substack{\tau\in\mathcal{N}^{(l_1)},\theta\in\mathcal{N}^{(l_2)},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{(\mathbb{I}_{k_1}+\tau)\cap(\mathbb{I}_{k_2}+\theta)\cap]\Tmin,\Tmax]}(t)\,dt
+    &G_{(l_1,k_1),(l_2,k_2)}&\simeq\sum_{\substack{\tau\in N^{l_1},\theta\in N^{l_2},\\  (\Tmin-A)\leq \tau< \Tmax,\\(\Tmin-A)\leq \theta< \Tmax }} \int_{\Tmin}^{\Tmax}\mathds{1}_{(\mathbb{I}_{k_1}+\tau)\cap(\mathbb{I}_{k_2}+\theta)\cap]\Tmin,\Tmax]}(t)\,dt
   \ee}}
 \item $get\_low\_index(x,T)$  renvoie le plus petit entier $i$ tel que
 \be
-T_i > x \ \ \hbox{et }0<i<T.size()
+T_i > x \ \ \hbox{et }1\leq i\leq (T.size()+1)
 \ee
 \end{itemize}
 \end{frame}
@@ -608,16 +618,17 @@ T_i > x \ \ \hbox{et }0<i<T.size()
   \ee
   \item  Partie spontanée pour le neurone $r$ dans $\mu_2$
     \be
-    (\mu_2)_{spont}^{(r)}=\int_{\Tmin}^{\Tmax} \,dN^{r}_t
+    (\mu_2)_{spont}^{r}=\int_{\Tmin}^{\Tmax} \,dN^{r}_t
     \ee
     Contribution du neurone $l$ sur $r$, pour la boîte (bin) $k$
     \be
-    (\mu_2)_{(l,k)}^{(r)}&=&\int_{\Tmin}^{\Tmax} \left(\psi^l_t(\varphi_k)\right)^2\,dN^{r}_t\\
+    (\mu_2)_{(l,k)}^{r}&=&\int_{\Tmin}^{\Tmax} \left(\psi^l_t(\varphi_k)\right)^2\,dN^{r}_t\\
 %    \ee
 %  \item %$\mu_A$
 %    \be
-    (\mu_A)_{spont}&=&1, \ \ (\mu_A)_{(l,k)}=\sup_{t\in]\Tmin,\Tmax]}|\psi^l_t(\varphi_k)|
-        \ee
+%    (\mu_A)_{spont}&=&1, \ \ (\mu_A)_{(l,k)}=\sup_{t\in]\Tmin,\Tmax]}|\psi^l_t(\varphi_k)|
+    (\mu_A)_{spont}&=&1, \ \ (\mu_A)_{(l,k)}=\sup_{t\in(\Tmin,\Tmax]}|\psi^l_t(\varphi_k)|
+    \ee
   \end{itemize}
 \end{frame}
 
